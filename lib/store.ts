@@ -355,6 +355,89 @@ export function addMember(goalId: string, userId: string): void {
   });
 }
 
+/**
+ * Flow 5a: Single member leaves (Admin decision, no vote).
+ * 1. Member's tracked contributions are immediately refunded to their bank account.
+ * 2. Member is removed from the goal.
+ * 3. Remaining target shortfall is recalculated and remaining members' installment is adjusted upward.
+ */
+export async function removeMemberAndAdjust(
+  goalId: string,
+  memberUserId: string,
+): Promise<{ refundedAmount: number; newInstallment: number; memberName: string }> {
+  const goal = getGoal(goalId);
+  if (!goal) throw new Error("Goal not found");
+
+  const memberIndex = db().members.findIndex(
+    (m) => m.goalId === goalId && m.userId === memberUserId,
+  );
+  if (memberIndex === -1) throw new Error("Member not in goal");
+
+  const user = getUser(memberUserId);
+  const memberName = user?.name ?? "Member";
+
+  // Calculate this member's total tracked contributions
+  const refundedAmount = contributedBy(goalId, memberUserId);
+
+  // If they contributed, execute an instant BMONI refund to their bank account
+  if (refundedAmount > 0) {
+    const result = await bmoni.createPayout({
+      recipientUserId: memberUserId,
+      amount: refundedAmount,
+      type: "emergency_refund",
+    });
+
+    db().payouts.push({
+      id: genId("p"),
+      goalId,
+      recipientUserId: memberUserId,
+      amount: refundedAmount,
+      type: "emergency_refund",
+      bmoniProposalId: result.proposalId,
+      bmoniStatus: result.status,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Remove their contribution records from the pool
+    db().contributions = db().contributions.filter(
+      (c) => !(c.goalId === goalId && c.contributorUserId === memberUserId),
+    );
+  }
+
+  // Remove the member from the group
+  db().members.splice(memberIndex, 1);
+
+  // Recalculate remaining pool and installment for remaining members
+  const currentSaved = goalSaved(goalId);
+  const remainingMembers = goalMembers(goalId);
+  const memberCount = Math.max(1, remainingMembers.length);
+
+  // Calculate new per-member installment
+  const newTotalInstallment = installmentFor({
+    target: goal.targetAmount,
+    deadline: goal.deadline,
+    frequency: goal.frequency,
+    saved: currentSaved,
+  });
+
+  const newPerMemberInstallment = Math.ceil(newTotalInstallment / memberCount);
+  goal.installmentAmount = newPerMemberInstallment;
+
+  return {
+    refundedAmount,
+    newInstallment: newPerMemberInstallment,
+    memberName,
+  };
+}
+
+/** Admin manual close of a goal */
+export async function closeGoal(goalId: string): Promise<void> {
+  const goal = getGoal(goalId);
+  if (!goal) return;
+  goal.status = "completed";
+}
+
+
 export function createWithdrawal(input: {
   goalId: string;
   requestedBy: string;

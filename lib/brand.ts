@@ -1,22 +1,17 @@
 /**
  * Single source of truth for the product's name and voice.
- *
- * The reference designs brand this "GoalNaija". The final name is still TBD —
- * change it HERE (and nowhere else) and it propagates to the logo, page titles,
- * and marketing copy across the whole app.
  */
 export const BRAND = {
   /** Full product name, used in page titles and prose. */
-  name: "GoalNaija",
+  name: "Aidex",
   /**
-   * Two-tone logo wordmark: the first part renders in ink, the second in the
-   * brand green (matching the reference logo "Goal" + "Naija").
+   * Two-tone logo wordmark: "Ai" in dark ink, "dex" in brand green.
    */
-  nameParts: ["Goal", "Naija"] as [string, string],
-  tagline: "Big things start with small steps",
+  nameParts: ["Ai", "dex"] as [string, string],
+  tagline: "Save toward what matters. Hit your target.",
   description:
-    "Set a goal, save on a schedule, and hit your target — solo or with friends. " +
-    "No account needed to contribute, and we keep it fair when plans change.",
-  /** Named after the settlement rail we sit on, surfaced in the pitch/footer. */
+    "A goal-based savings platform. Save toward specific items solo or with friends on an automated schedule powered by BMONI.",
+  /** Settlement rail */
   rail: "BMONI",
 } as const;
+

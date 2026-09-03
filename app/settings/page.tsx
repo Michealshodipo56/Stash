@@ -43,7 +43,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h2 className="font-display font-semibold text-ink text-base">Personal Information</h2>
-                <p className="text-xs text-muted">Your identity as verified on GoalNaija</p>
+                <p className="text-xs text-muted">Your identity as verified on Aidex</p>
               </div>
             </div>
 
