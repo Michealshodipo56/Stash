@@ -185,9 +185,9 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <p className="text-[13px] text-[#595B52] leading-tight">
-                      Trusted by students
+                      Trusted across Nigeria
                       <br />
-                      <span className="text-[#17170F] font-bold">across Nigeria</span>
+                      <span className="text-[#17170F] font-bold">for every goal</span>
                     </p>
                     {/* Decorative green spring doodle */}
                     <svg
@@ -543,8 +543,8 @@ export default function LandingPage() {
                         <polygon points="17,3 7,17 15,17 15,29 25,15 17,15" />
                       </svg>
                     ),
-                    title: "Built for students",
-                    body: "Simple, transparent,\nand affordable.",
+                    title: "Built for real goals",
+                    body: "Simple, transparent,\nand automated.",
                   },
                 ].map(({ icon, title, body }) => (
                   <div key={title} className="flex items-center gap-4 px-6 py-5 lg:py-6">
@@ -820,7 +820,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Right Side: Copy & Celebratory Students Illustration */}
+              {/* Right Side: Copy & Celebratory Group Illustration */}
               <div className="lg:col-span-6 flex flex-col md:flex-row items-center justify-between gap-6">
                 <FadeUp className="space-y-5 max-w-md">
                   <p className="text-xs font-bold text-[#8CC63F] uppercase tracking-widest">
@@ -831,7 +831,7 @@ export default function LandingPage() {
                     <span className="text-[#8CC63F]">Fairer together.</span>
                   </h2>
                   <p className="text-[14px] sm:text-[15px] text-[#595B52] leading-relaxed font-normal">
-                    Pool money for shared goals with friends, classmates, or your department.
+                    Pool money for shared goals with friends, colleagues, or your community.
                     Everyone contributes. Everyone has a say. If plans change, everyone gets
                     their fair share back.
                   </p>
@@ -848,7 +848,7 @@ export default function LandingPage() {
                   </div>
                 </FadeUp>
 
-                {/* Real Students Illustration with Sparkle Doodle */}
+                {/* Celebratory Group Illustration with Sparkle Doodle */}
                 <FadeUp delay={0.2} className="shrink-0 relative flex flex-col items-center justify-center">
                   {/* Green Starburst Doodle above high five */}
                   <div aria-hidden="true" className="absolute -top-3 left-1/2 -translate-x-1/2 text-[#8CC63F]">
@@ -865,7 +865,7 @@ export default function LandingPage() {
                   </div>
                   <img
                     src="/images/pe1.webp"
-                    alt="Group of Nigerian students celebrating together"
+                    alt="Friends and group members celebrating goal completion together"
                     className="w-[240px] sm:w-[280px] h-auto object-contain select-none"
                   />
                 </FadeUp>
@@ -909,7 +909,7 @@ export default function LandingPage() {
                     </span>
                   </h2>
                   <p className="text-white/60 text-xs sm:text-sm mt-3 font-normal">
-                    Join thousands of students hitting their goals — one step at a time.
+                    Join thousands hitting their goals — one step at a time.
                   </p>
                 </div>
 
