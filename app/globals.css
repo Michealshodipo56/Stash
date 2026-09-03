@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   GoalNaija design system  (Tailwind v4, CSS-first)
+   Extracted from the reference designs: warm cream canvas, chunky ink display
+   type, a lime brand green, with amber (schedule) and coral (emergency) accents.
+   ========================================================================== */
+
+@theme {
+  /* — Neutrals / surfaces — */
+  --color-cream: #f5f4ee; /* page canvas */
+  --color-surface: #ffffff; /* cards */
+  --color-surface-2: #faf9f4; /* insets, hovers */
+  --color-ink: #17170f; /* primary text + dark buttons */
+  --color-ink-hover: #24241a;
+  --color-muted: #6b6d62; /* secondary text */
+  --color-faint: #9a9b8f; /* tertiary text */
+  --color-line: #e9e8e0; /* borders */
+  --color-line-soft: #f1f0e9;
+
+  /* — Brand (lime green). Buttons use ink text on brand-400/500. — */
+  --color-brand-50: #f3f8e8;
+  --color-brand-100: #e4f1cb;
+  --color-brand-200: #d0e8a4;
+  --color-brand-300: #b8dd74;
+  --color-brand-400: #a3d357;
+  --color-brand-500: #8cc63f;
+  --color-brand-600: #6fa62f;
+  --color-brand-700: #567e26;
+
+  /* — Amber: savings schedule, "on plan" group progress, step badges — */
+  --color-amber-100: #fbeecb;
+  --color-amber-200: #f8e0a0;
+  --color-amber-300: #f5cf6b;
+  --color-amber-400: #f3c449;
+  --color-amber-500: #d99f22;
+
+  /* — Coral: emergency withdrawal / action-needed (status: serious) — */
+  --color-coral-100: #fadfd6;
+  --color-coral-200: #f6bdad;
+  --color-coral-300: #f2937b;
+  --color-coral-400: #ee6f57;
+  --color-coral-500: #dd5137;
+  --color-coral-600: #c0402a;
+
+  /* — Indigo: payouts / bank rail accent — */
+  --color-indigo-100: #e2e5f3;
+  --color-indigo-500: #4a59a0;
+
+  /* — Radii — */
+  --radius-tile: 1rem; /* 16px */
+  --radius-card: 1.25rem; /* 20px */
+  --radius-xl2: 1.75rem; /* 28px hero cards */
+
+  /* — Soft, warm shadows — */
+  --shadow-card: 0 1px 2px rgba(20, 20, 15, 0.04),
+    0 10px 30px -18px rgba(20, 20, 15, 0.18);
+  --shadow-pop: 0 8px 40px -8px rgba(20, 20, 15, 0.22);
+  --shadow-lift: 0 2px 4px rgba(20, 20, 15, 0.05),
+    0 18px 40px -20px rgba(20, 20, 15, 0.28);
+
+  /* — Ambient motion (Framer handles the rest) — */
+  --animate-float: float 9s ease-in-out infinite;
+  --animate-float-slow: float 14s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+}
+
+/* Map next/font CSS variables (set on <html>) to Tailwind font utilities. */
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-bricolage);
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(1.5deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(140, 198, 63, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(140, 198, 63, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(140, 198, 63, 0);
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), var(--font-sans), sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: var(--color-brand-200);
+    color: var(--color-ink);
+  }
+
+  /* Respect reduced-motion for all the ambient/entrance animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), var(--font-sans), sans-serif;
+  }
+
+  /* Numeric alignment for money figures. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Thin custom scrollbar for the app shell. */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border-radius: 9999px;
+  }
+}
