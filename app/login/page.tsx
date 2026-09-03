@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Lock, Eye, EyeOff, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, Lock, Eye, EyeOff, ShieldCheck, Zap, AlertCircle } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -18,26 +18,35 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!phoneOrEmail) return;
+    if (!phoneOrEmail || !password) return;
 
     setLoading(true);
-    setTimeout(() => {
-      login(phoneOrEmail);
-      setLoading(false);
+    setErrorMessage(null);
+
+    const res = await login({ phoneOrEmail: phoneOrEmail.trim(), password });
+    setLoading(false);
+
+    if (res.success) {
       router.push(redirectPath);
-    }, 500);
+    } else {
+      setErrorMessage(res.error || "Login failed. Please check your credentials.");
+    }
   }
 
-  function handleDemoLogin() {
+  async function handleDemoLogin() {
     setLoading(true);
-    setTimeout(() => {
-      loginAsDemo();
-      setLoading(false);
+    setErrorMessage(null);
+    const res = await loginAsDemo();
+    setLoading(false);
+    if (res.success) {
       router.push(redirectPath);
-    }, 400);
+    } else {
+      setErrorMessage(res.error || "Demo login failed");
+    }
   }
 
   return (
@@ -67,7 +76,6 @@ function LoginForm() {
 
             {/* Illustration with green sun doodle */}
             <div className="relative my-6 sm:my-8 flex flex-col items-center justify-center">
-              {/* Green Sun / Starburst Doodle */}
               <div aria-hidden="true" className="text-[#8CC63F] mb-1">
                 <svg viewBox="0 0 36 36" className="w-9 h-9" fill="none">
                   <circle cx="18" cy="18" r="4.5" stroke="#8CC63F" strokeWidth="2.5" />
@@ -116,7 +124,7 @@ function LoginForm() {
                 type="button"
                 onClick={handleDemoLogin}
                 disabled={loading}
-                className="w-full mt-1 py-2.5 px-4 rounded-xl bg-[#8CC63F] hover:bg-[#7db835] text-[#17170F] text-xs font-bold transition-all shadow-xs"
+                className="w-full mt-1 py-2.5 px-4 rounded-xl bg-[#8CC63F] hover:bg-[#7db835] text-[#17170F] text-xs font-bold transition-all shadow-xs disabled:opacity-40"
               >
                 ⚡ Instant Demo Login
               </button>
@@ -132,6 +140,14 @@ function LoginForm() {
                 </span>
               </div>
             </div>
+
+            {/* Error banner */}
+            {errorMessage && (
+              <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 flex items-start gap-2.5 text-xs text-red-700">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
@@ -180,7 +196,7 @@ function LoginForm() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={loading || !phoneOrEmail}
+                  disabled={loading || !phoneOrEmail || !password}
                   className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#17170F] hover:bg-black text-white py-3.5 px-6 text-sm font-bold transition-all shadow-sm hover:shadow disabled:opacity-40"
                 >
                   <span>{loading ? "Signing in..." : "Log in to Aidex"}</span>

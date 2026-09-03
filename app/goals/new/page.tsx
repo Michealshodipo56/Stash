@@ -134,6 +134,7 @@ export default function NewGoalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
+          ownerId: user.id,
           ownerName: user.name,
           title,
           type: goalType,

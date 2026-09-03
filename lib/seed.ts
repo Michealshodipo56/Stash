@@ -3,6 +3,7 @@ import type {
   Goal,
   GoalMember,
   Payout,
+  Session,
   User,
   WithdrawalRequest,
   WithdrawalVote,
@@ -18,11 +19,12 @@ const hoursAgo = (h: number) => iso(now() - h * HOUR);
 const daysAgo = (d: number) => iso(now() - d * DAY);
 const daysFromNow = (d: number) => iso(now() + d * DAY);
 
-/** The single demo user we act as (no auth for the hackathon). */
-export const CURRENT_USER_ID = "u_tolu";
+/** Default demo user ID fallback if needed */
+export const CURRENT_USER_ID = "u_default";
 
 export interface StoreData {
   users: User[];
+  sessions: Session[];
   goals: Goal[];
   members: GoalMember[];
   contributions: Contribution[];
@@ -33,6 +35,20 @@ export interface StoreData {
 }
 
 export function createSeedData(): StoreData {
+  return {
+    users: [],
+    sessions: [],
+    goals: [],
+    members: [],
+    contributions: [],
+    withdrawalRequests: [],
+    withdrawalVotes: [],
+    payouts: [],
+    streak: { days: 0, week: [false, false, false, false, false, false, false] },
+  };
+}
+
+export function createDemoSeedData(): StoreData {
   const users: User[] = [
     {
       id: "u_tolu",
@@ -190,6 +206,7 @@ export function createSeedData(): StoreData {
 
   return {
     users,
+    sessions: [],
     goals,
     members,
     contributions,
@@ -236,7 +253,7 @@ function c(
     contributorName,
     contributorUserId,
     amount,
-    bmoniReference: `TRX${Math.floor(Math.random() * 1e9)}`,
+    bmoniReference: `TRX_${Date.now().toString(36)}_${(++seq).toString(36)}`,
     receivedAt,
   };
 }
@@ -249,3 +266,4 @@ function v(
 ): WithdrawalVote {
   return { id: nid("v"), requestId, voterId, vote, votedAt };
 }
+

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Wallet, ArrowRight, CheckCircle2, Building2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/app/context/AuthContext";
+import { NIGERIAN_BANKS } from "@/lib/banks";
 
 function OnboardingContent() {
   const router = useRouter();
@@ -18,44 +19,42 @@ function OnboardingContent() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Form inputs
-  const [fullName, setFullName] = useState(user?.name || "Tolu Adeyemi");
-  const [phone, setPhone] = useState(user?.phoneOrEmail || "+234 801 234 5678");
-  const [ninBvn, setNinBvn] = useState(user?.ninBvn || "22334455667");
-  const [bankName, setBankName] = useState(user?.bankAccount?.bankName || "GTBank");
-  const [accountNumber, setAccountNumber] = useState(user?.bankAccount?.accountNumber || "0123456789");
-
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [phone, setPhone] = useState(user?.phone || user?.phoneOrEmail || "");
+  const [ninBvn, setNinBvn] = useState(user?.ninBvn || "");
+  const [bankName, setBankName] = useState(user?.bankAccount?.bankName || "Guaranty Trust Bank (GTBank)");
+  const [accountNumber, setAccountNumber] = useState(user?.bankAccount?.accountNumber || "");
   const [loading, setLoading] = useState(false);
-  const [walletDetails, setWalletDetails] = useState<{
-    bmoniUserId: string;
-    smartWalletId: string;
-    walletAddress: string;
-  } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync when user loads
+  useEffect(() => {
+    if (user?.name && !fullName) setFullName(user.name);
+    if ((user?.phone || user?.phoneOrEmail) && !phone) setPhone(user.phone || user.phoneOrEmail || "");
+    if (user?.ninBvn && !ninBvn) setNinBvn(user.ninBvn);
+    if (user?.bankAccount?.accountNumber && !accountNumber) setAccountNumber(user.bankAccount.accountNumber);
+  }, [user]);
 
   async function handleSubmitKyc(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
 
-    const generatedWallet = {
-      bmoniUserId: `bm_usr_${Math.random().toString(36).substring(2, 9)}`,
-      smartWalletId: `sw_${Math.random().toString(36).substring(2, 9)}`,
-      walletAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
-    };
+    const res = await updateKycAndBank({
+      fullName,
+      ninBvn,
+      bankName,
+      accountNumber,
+      phone,
+    });
 
-    setTimeout(() => {
-      setLoading(false);
-      setWalletDetails(generatedWallet);
+    setLoading(false);
 
-      // Save to AuthContext
-      updateKycAndBank({
-        ninBvn,
-        bankName,
-        accountNumber,
-        accountName: fullName,
-        ...generatedWallet,
-      });
-
+    if (res.success) {
       setStep(3);
-    }, 1200);
+    } else {
+      setErrorMessage(res.error || "Failed to submit verification details");
+    }
   }
 
   return (
@@ -92,9 +91,16 @@ function OnboardingContent() {
           <div className="h-px w-8 bg-line" />
           <div className={cn("flex items-center gap-2 font-semibold", step === 3 ? "text-ink" : "text-faint")}>
             <span className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px]", step === 3 ? "bg-brand-500 text-ink" : "bg-line text-faint")}>3</span>
-            Smart Wallet
+            Confirmation
           </div>
         </div>
+
+        {errorMessage && (
+          <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 flex items-start gap-2.5 text-xs text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Step 1 Form */}
         {step === 1 && (
@@ -148,7 +154,7 @@ function OnboardingContent() {
         {step === 2 && (
           <form onSubmit={handleSubmitKyc} className="rounded-card border border-line bg-surface p-6 space-y-4">
             <h2 className="font-display font-semibold text-ink text-base">2. Payout Bank Account</h2>
-            <p className="text-xs text-muted">Enter the bank account where your savings target payouts will be sent.</p>
+            <p className="text-xs text-muted">Enter the Nigerian bank account where your goal target payouts will land.</p>
 
             <div>
               <label className="block text-xs font-semibold text-ink mb-1">Bank Name</label>
@@ -157,11 +163,25 @@ function OnboardingContent() {
                 onChange={(e) => setBankName(e.target.value)}
                 className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-400"
               >
-                <option value="Guaranty Trust Bank (GTBank)">Guaranty Trust Bank (GTBank)</option>
-                <option value="Access Bank">Access Bank</option>
-                <option value="Kuda Bank">Kuda Microfinance Bank</option>
-                <option value="OPay">OPay Digital Services</option>
-                <option value="Zenith Bank">Zenith Bank</option>
+                <option value="">Select your bank ({NIGERIAN_BANKS.length} banks available)...</option>
+                <optgroup label="Popular Nigerian Banks">
+                  <option value="Guaranty Trust Bank (GTBank)">Guaranty Trust Bank (GTBank)</option>
+                  <option value="Access Bank">Access Bank</option>
+                  <option value="Zenith Bank">Zenith Bank</option>
+                  <option value="First Bank of Nigeria">First Bank of Nigeria</option>
+                  <option value="United Bank for Africa (UBA)">United Bank for Africa (UBA)</option>
+                  <option value="OPay Digital Services (PayCom)">OPay Digital Services (PayCom)</option>
+                  <option value="PalmPay">PalmPay</option>
+                  <option value="Moniepoint Microfinance Bank">Moniepoint Microfinance Bank</option>
+                  <option value="Kuda Bank">Kuda Bank</option>
+                </optgroup>
+                <optgroup label="All Nigerian Commercial, Digital & Microfinance Banks (A - Z)">
+                  {NIGERIAN_BANKS.map((b) => (
+                    <option key={b.code + b.name} value={b.name}>
+                      {b.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -172,6 +192,7 @@ function OnboardingContent() {
                 maxLength={10}
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                placeholder="10 digit NUBAN"
                 className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </div>
@@ -190,40 +211,40 @@ function OnboardingContent() {
                 disabled={loading || accountNumber.length < 10}
                 className="flex-1 flex items-center justify-center gap-2 rounded-full bg-brand-500 text-ink py-3 text-sm font-semibold hover:bg-brand-400 disabled:opacity-40 transition-colors"
               >
-                {loading ? "Creating BMONI Wallet..." : "Complete Setup 🚀"}
+                {loading ? "Verifying with BMONI..." : "Complete Setup 🚀"}
               </button>
             </div>
           </form>
         )}
 
         {/* Step 3 Success */}
-        {step === 3 && walletDetails && (
+        {step === 3 && (
           <div className="rounded-card border-2 border-brand-300 bg-brand-50/50 p-6 space-y-5 text-center">
-            <div className="w-12 h-12 rounded-full bg-brand-500 text-ink flex items-center justify-center mx-auto text-2xl">
+            <div className="w-12 h-12 rounded-full bg-brand-500 text-ink flex items-center justify-center mx-auto text-2xl font-bold">
               ✓
             </div>
 
             <div>
-              <h2 className="font-display text-2xl font-bold text-ink">BMONI Smart Wallet Ready!</h2>
-              <p className="text-xs text-muted mt-1">Your non-custodial smart wallet has been created and linked to your NIN/BVN &amp; payout bank account.</p>
+              <h2 className="font-display text-2xl font-bold text-ink">Verification Completed!</h2>
+              <p className="text-xs text-muted mt-1">Your payout bank account is linked, and your goal payout rails are ready.</p>
             </div>
 
             <div className="rounded-xl border border-line bg-surface p-4 text-left space-y-2 text-xs font-mono">
               <div className="flex justify-between border-b border-line pb-1">
-                <span className="text-muted">BMONI User ID:</span>
-                <span className="font-bold text-ink">{walletDetails.bmoniUserId}</span>
+                <span className="text-muted">Account Holder:</span>
+                <span className="font-bold text-ink">{user?.name || fullName}</span>
               </div>
               <div className="flex justify-between border-b border-line pb-1">
-                <span className="text-muted">Smart Wallet ID:</span>
-                <span className="font-bold text-ink">{walletDetails.smartWalletId}</span>
+                <span className="text-muted">BMONI User ID:</span>
+                <span className="font-bold text-ink">{user?.bmoniUserId || "Provisioning in progress"}</span>
               </div>
               <div className="flex justify-between border-b border-line pb-1">
                 <span className="text-muted">Payout Account:</span>
                 <span className="font-bold text-ink">{bankName} ({accountNumber})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted">Wallet Address:</span>
-                <span className="font-bold text-ink truncate max-w-[180px]">{walletDetails.walletAddress}</span>
+                <span className="text-muted">KYC Status:</span>
+                <span className="font-bold text-emerald-700">Verified ✓</span>
               </div>
             </div>
 

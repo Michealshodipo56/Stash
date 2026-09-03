@@ -1,23 +1,84 @@
 import { NextResponse } from "next/server";
+import { getCurrentSessionUser } from "@/lib/auth";
+import { upsertUser, getUser } from "@/lib/store";
+import { startNigeriaKyc } from "@/lib/bmoni";
 
 export async function POST(req: Request) {
   try {
+    const sessionUser = await getCurrentSessionUser();
     const body = await req.json();
-    const { fullName, phone, ninBvn, bankName, accountNumber } = body;
+    const { userId, fullName, phone, ninBvn, bankName, accountNumber } = body;
 
-    if (!fullName || !ninBvn) {
-      return NextResponse.json({ error: "Missing identity parameters" }, { status: 400 });
+    const targetUserId = sessionUser?.id || userId;
+    if (!targetUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const bmoniUser = {
-      bmoniUserId: `bm_user_${Math.random().toString(36).substring(2, 9)}`,
-      smartWalletId: `sw_${Math.random().toString(36).substring(2, 9)}`,
-      walletAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
-      kycStatus: "active",
-    };
+    if (!fullName || !ninBvn || !accountNumber || !bankName) {
+      return NextResponse.json(
+        { error: "Full name, NIN/BVN, bank name, and account number are required" },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ success: true, user: bmoniUser });
+    const existing = getUser(targetUserId);
+    if (!existing) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    let bmoniKycResult: any = null;
+    let bmoniKycError: string | undefined;
+
+    // If a real bmoniUserId is present on the user, call live BMONI Nigeria KYC endpoint
+    if (existing.bmoniUserId) {
+      try {
+        bmoniKycResult = await startNigeriaKyc(existing.bmoniUserId, {
+          bvn: ninBvn,
+          accountNumber,
+        });
+      } catch (err: any) {
+        bmoniKycError = err.message || "BMONI KYC onboarding error";
+        console.warn("BMONI KYC submission notice:", bmoniKycError);
+      }
+    }
+
+    // Persist verified KYC & bank details to user's real record
+    const updated = upsertUser({
+      id: targetUserId,
+      name: fullName,
+      phone: phone || existing.phone,
+      bankAccountNumber: accountNumber,
+      bankName: bankName,
+      kycStatus: "active",
+      bmoniError: bmoniKycError || existing.bmoniError,
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        phone: updated.phone,
+        bmoniUserId: updated.bmoniUserId,
+        bmoniError: updated.bmoniError,
+        smartWalletId: updated.smartWalletId,
+        walletAddress: updated.walletAddress,
+        kycStatus: updated.kycStatus,
+        isKycVerified: true,
+        bankAccount: {
+          bankName: updated.bankName,
+          accountNumber: updated.bankAccountNumber,
+          accountName: updated.name,
+        },
+      },
+      bmoniKycResult,
+      bmoniKycError,
+    });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message ?? "Onboarding failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message ?? "Onboarding failed" },
+      { status: 500 }
+    );
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 export interface UserBankAccount {
   bankName: string;
@@ -11,135 +11,231 @@ export interface UserBankAccount {
 export interface UserProfile {
   id: string;
   name: string;
-  phoneOrEmail: string;
+  email?: string;
+  phone?: string;
+  phoneOrEmail?: string;
   isKycVerified: boolean;
+  kycStatus?: "none" | "pending" | "active";
   ninBvn?: string;
   bankAccount?: UserBankAccount;
   bmoniUserId?: string;
+  bmoniError?: string;
   smartWalletId?: string;
   walletAddress?: string;
+}
+
+export interface SignupInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  password: string;
+}
+
+export interface LoginInput {
+  phoneOrEmail: string;
+  password: string;
+}
+
+export interface KycInput {
+  fullName?: string;
+  accountName?: string;
+  ninBvn: string;
+  bankName: string;
+  accountNumber: string;
+  phone?: string;
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
-  login: (phoneOrEmail: string, name?: string) => void;
-  loginAsDemo: () => void;
-  signup: (name: string, phoneOrEmail: string) => void;
-  logout: () => void;
-  updateKycAndBank: (data: {
-    ninBvn: string;
-    bankName: string;
-    accountNumber: string;
-    accountName?: string;
-    bmoniUserId?: string;
-    smartWalletId?: string;
-    walletAddress?: string;
-  }) => void;
+  login: (credentials: LoginInput) => Promise<{ success: boolean; error?: string }>;
+  loginAsDemo: () => Promise<{ success: boolean; error?: string }>;
+  signup: (
+    input: SignupInput
+  ) => Promise<{ success: boolean; error?: string; bmoniError?: string; user?: UserProfile }>;
+  logout: () => Promise<void>;
+  updateKycAndBank: (
+    data: KycInput
+  ) => Promise<{ success: boolean; error?: string; user?: UserProfile }>;
+  refreshUser: () => Promise<void>;
 }
 
-const DEMO_USER: UserProfile = {
-  id: "u_tolu",
-  name: "Tolu Adeyemi",
-  phoneOrEmail: "+234 801 234 5678",
-  isKycVerified: true,
-  ninBvn: "22334455667",
-  bankAccount: {
-    bankName: "Guaranty Trust Bank (GTBank)",
-    accountNumber: "0123456789",
-    accountName: "Tolu Adeyemi",
-  },
-  bmoniUserId: "bm_usr_tolu_01",
-  smartWalletId: "sw_tolu_01",
-  walletAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const AUTH_STORAGE_KEY = "aidex_auth_user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const refreshUser = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
+      const res = await fetch("/api/auth/session", {
+        method: "GET",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUser({
+            ...data.user,
+            phoneOrEmail: data.user.email || data.user.phone || "",
+            isKycVerified: data.user.kycStatus === "active" || Boolean(data.user.bankAccount),
+          });
+        } else {
+          setUser(null);
+        }
       } else {
-        setUser(DEMO_USER);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(DEMO_USER));
+        setUser(null);
       }
     } catch (e) {
-      console.error("Failed to parse auth user:", e);
+      console.error("Failed to check auth session:", e);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  function saveUser(u: UserProfile | null) {
-    setUser(u);
-    if (u) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(u));
-    } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
+
+  async function login(credentials: LoginInput): Promise<{ success: boolean; error?: string }> {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || "Login failed" };
+      }
+
+      setUser({
+        ...data.user,
+        phoneOrEmail: data.user.email || data.user.phone || credentials.phoneOrEmail,
+        isKycVerified: data.user.kycStatus === "active" || Boolean(data.user.bankAccount),
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error during login" };
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  function login(phoneOrEmail: string, name?: string) {
-    const existing = user;
-    const newUser: UserProfile = {
-      id: existing?.id || `u_${Date.now().toString(36)}`,
-      name: name || phoneOrEmail.split("@")[0] || "Aidex User",
-      phoneOrEmail,
-      isKycVerified: false,
-    };
-    saveUser(newUser);
+  async function signup(input: SignupInput): Promise<{
+    success: boolean;
+    error?: string;
+    bmoniError?: string;
+    user?: UserProfile;
+  }> {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return {
+          success: false,
+          error: data.error || "Signup failed",
+          bmoniError: data.bmoniError,
+        };
+      }
+
+      const safeUser: UserProfile = {
+        ...data.user,
+        phoneOrEmail: data.user.email || data.user.phone || "",
+        isKycVerified: data.user.kycStatus === "active" || Boolean(data.user.bankAccount),
+      };
+
+      setUser(safeUser);
+      return {
+        success: true,
+        user: safeUser,
+        bmoniError: data.bmoniError,
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error during signup" };
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  function loginAsDemo() {
-    saveUser(DEMO_USER);
+  async function loginAsDemo(): Promise<{ success: boolean; error?: string }> {
+    // Attempt login with pre-seeded demo user
+    return login({
+      phoneOrEmail: "+2348012345678",
+      password: "DemoPassword123!",
+    }).then(async (result) => {
+      if (!result.success) {
+        // Fallback: create the demo user on the fly if not yet in store
+        const signupRes = await signup({
+          name: "Tolu Adeyemi",
+          phone: "+2348012345678",
+          email: "tolu@example.com",
+          password: "DemoPassword123!",
+        });
+        if (signupRes.success && signupRes.user) {
+          // Verify demo user bank
+          await updateKycAndBank({
+            fullName: "Tolu Adeyemi",
+            ninBvn: "22334455667",
+            bankName: "Guaranty Trust Bank (GTBank)",
+            accountNumber: "0123456789",
+          });
+          return { success: true };
+        }
+      }
+      return result;
+    });
   }
 
-  function signup(name: string, phoneOrEmail: string) {
-    const newUser: UserProfile = {
-      id: `u_${Date.now().toString(36)}`,
-      name,
-      phoneOrEmail,
-      isKycVerified: false,
-    };
-    saveUser(newUser);
+  async function logout(): Promise<void> {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    setUser(null);
   }
 
-  function logout() {
-    saveUser(null);
-  }
+  async function updateKycAndBank(
+    data: KycInput
+  ): Promise<{ success: boolean; error?: string; user?: UserProfile }> {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          ...data,
+        }),
+      });
 
-  function updateKycAndBank(data: {
-    ninBvn: string;
-    bankName: string;
-    accountNumber: string;
-    accountName?: string;
-    bmoniUserId?: string;
-    smartWalletId?: string;
-    walletAddress?: string;
-  }) {
-    if (!user) return;
-    const updated: UserProfile = {
-      ...user,
-      isKycVerified: true,
-      ninBvn: data.ninBvn,
-      bankAccount: {
-        bankName: data.bankName,
-        accountNumber: data.accountNumber,
-        accountName: data.accountName || user.name,
-      },
-      bmoniUserId: data.bmoniUserId || `bm_usr_${Math.random().toString(36).substring(2, 9)}`,
-      smartWalletId: data.smartWalletId || `sw_${Math.random().toString(36).substring(2, 9)}`,
-      walletAddress: data.walletAddress || `0x${Math.random().toString(16).substring(2, 42)}`,
-    };
-    saveUser(updated);
+      const responseData = await res.json();
+      if (!res.ok || !responseData.success) {
+        return { success: false, error: responseData.error || "KYC verification failed" };
+      }
+
+      const updatedUser: UserProfile = {
+        ...responseData.user,
+        phoneOrEmail: responseData.user.email || responseData.user.phone || user?.phoneOrEmail || "",
+        isKycVerified: true,
+      };
+
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to submit KYC" };
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -152,6 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         logout,
         updateKycAndBank,
+        refreshUser,
       }}
     >
       {children}

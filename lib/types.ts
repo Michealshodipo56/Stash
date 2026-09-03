@@ -18,8 +18,10 @@ export interface User {
   name: string;
   phone?: string;
   email?: string;
+  passwordHash?: string;
   /** BMONI identifiers (see doc/ARCHITECTURE.md §4.1). */
   bmoniUserId?: string;
+  bmoniError?: string;
   smartWalletId?: string;
   walletAddress?: string;
   kycStatus: KycStatus;
@@ -29,6 +31,15 @@ export interface User {
   avatarColor?: string;
   createdAt: string;
 }
+
+export interface Session {
+  id: string;
+  token: string;
+  userId: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 
 export interface Goal {
   id: string;

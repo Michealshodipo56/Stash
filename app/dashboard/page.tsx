@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
@@ -31,21 +31,62 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
 
+  const [dashboardData, setDashboardData] = useState<{
+    goals: Goal[];
+    summary: {
+      totalSaved: number;
+      goalCount: number;
+      thisMonth: number;
+      thisMonthDeltaPct: number;
+      groupContributions: number;
+      groupContributors: number;
+      payoutsReceived: number;
+    };
+    activity: any[];
+    streak: { days: number; week: boolean[] };
+  } | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login?redirect=/dashboard");
+      return;
     }
+    if (!user) return;
+
+    async function loadData() {
+      try {
+        const res = await fetch(`/api/goals?userId=${encodeURIComponent(user!.id)}`);
+        const json = await res.json();
+        if (json.success) {
+          setDashboardData(json);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setDataLoading(false);
+      }
+    }
+    loadData();
   }, [user, authLoading, router]);
 
-  const userId = user?.id || "u_tolu";
-  const goals = listGoalsForUser(userId);
-  const summary = dashboardSummary(userId);
-  const activity = recentActivity(userId, 5);
-  const streak = getStreak();
+  const userId = user?.id || "";
+  const goals = dashboardData ? dashboardData.goals : (userId ? listGoalsForUser(userId) : []);
+  const summary = dashboardData ? dashboardData.summary : (userId ? dashboardSummary(userId) : {
+    totalSaved: 0,
+    goalCount: 0,
+    thisMonth: 0,
+    thisMonthDeltaPct: 0,
+    groupContributions: 0,
+    groupContributors: 0,
+    payoutsReceived: 0,
+  });
+  const activity = dashboardData ? dashboardData.activity : (userId ? recentActivity(userId, 5) : []);
+  const streak = dashboardData ? dashboardData.streak : (userId ? getStreak(userId) : { days: 0, week: [false, false, false, false, false, false, false] });
 
   const STATS = [
     { icon: <CreditCard className="h-5 w-5 text-brand-500" />, bg: "bg-brand-50", label: "Total saved", value: formatNaira(summary.totalSaved), sub: `Across ${summary.goalCount} goals` },
-    { icon: <TrendingUp className="h-5 w-5 text-amber-500" />, bg: "bg-amber-100", label: "This month", value: formatNaira(summary.thisMonth), sub: `↑ ${summary.thisMonthDeltaPct}% from last month` },
+    { icon: <TrendingUp className="h-5 w-5 text-amber-500" />, bg: "bg-amber-100", label: "This month", value: formatNaira(summary.thisMonth), sub: summary.thisMonth > 0 ? "Saved this month" : "No deposits this month" },
     { icon: <Users className="h-5 w-5 text-indigo-500" />, bg: "bg-indigo-100", label: "Group contributions", value: formatNaira(summary.groupContributions), sub: `From ${summary.groupContributors} contributors` },
     { icon: <Landmark className="h-5 w-5 text-faint" />, bg: "bg-surface-2", label: "Payouts received", value: formatNaira(summary.payoutsReceived), sub: "Offramped to bank" },
   ];
@@ -150,18 +191,39 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
-              {goals.map((goal, i) => (
-                <motion.div
-                  key={goal.id}
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: 0.1 + i * 0.08 }}
-                >
-                  <GoalCard goal={goal} />
-                </motion.div>
-              ))}
-            </div>
+            {goals.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-line bg-surface/70 p-8 sm:p-12 text-center">
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-brand-50 border border-brand-200 flex items-center justify-center text-3xl mb-4 shadow-sm">
+                  🎯
+                </div>
+                <h3 className="font-display text-xl font-bold text-ink">No savings goals created yet</h3>
+                <p className="mt-2 text-sm text-muted max-w-md mx-auto leading-relaxed">
+                  Start your first individual or group goal to begin saving toward what matters.
+                  We&apos;ll generate a dedicated Providus NGN Virtual Account with automated settlement rails.
+                </p>
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Link
+                    href="/goals/new"
+                    className="flex items-center gap-2 rounded-full bg-ink text-cream px-6 py-3 text-sm font-semibold hover:bg-ink-hover transition-colors shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" /> Start Your First Goal
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                {goals.map((goal: Goal, i: number) => (
+                  <motion.div
+                    key={goal.id}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, delay: 0.1 + i * 0.08 }}
+                  >
+                    <GoalCard goal={goal} />
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Bottom row */}
@@ -174,32 +236,39 @@ export default function DashboardPage() {
                   See all <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-              <ul className="space-y-3">
-                {activity.map((item) => (
-                  <li key={item.id} className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                      item.kind === "contribution" ? "bg-brand-100 text-brand-600" :
-                      item.kind === "payout" ? "bg-amber-100 text-amber-500" :
-                      "bg-coral-100 text-coral-500"
-                    )}>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-ink truncate">
-                        {item.actorName} <span className="font-normal text-muted">{item.kind}</span>
-                      </p>
-                      <p className="text-[11px] text-faint truncate">{item.goalTitle}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-bold tabular text-ink">
-                        {item.kind === "contribution" ? "+" : "-"}{formatNaira(item.amount)}
-                      </p>
-                      <p className="text-[11px] text-faint">{formatDate(item.at)}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              {activity.length === 0 ? (
+                <div className="py-8 text-center text-muted">
+                  <p className="text-xs font-medium">No recent activity yet</p>
+                  <p className="text-[11px] text-faint mt-1">Deposits, votes, and payouts will appear here in real-time.</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {activity.map((item: any) => (
+                    <li key={item.id} className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                        item.kind === "contribution" ? "bg-brand-100 text-brand-600" :
+                        item.kind === "payout" ? "bg-amber-100 text-amber-500" :
+                        "bg-coral-100 text-coral-500"
+                      )}>
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-ink truncate">
+                          {item.actorName} <span className="font-normal text-muted">{item.kind}</span>
+                        </p>
+                        <p className="text-[11px] text-faint truncate">{item.goalTitle}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs font-bold tabular text-ink">
+                          {item.kind === "contribution" ? "+" : "-"}{formatNaira(item.amount)}
+                        </p>
+                        <p className="text-[11px] text-faint">{formatDate(item.at)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* On track */}
@@ -214,7 +283,7 @@ export default function DashboardPage() {
                       stroke="#8cc63f" strokeWidth="8"
                       strokeDasharray="188.5"
                       initial={{ strokeDashoffset: 188.5 }}
-                      animate={{ strokeDashoffset: 188.5 * (1 - 0.75) }}
+                      animate={{ strokeDashoffset: goals.length > 0 ? 188.5 * (1 - 0.75) : 188.5 }}
                       transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
                       strokeLinecap="round"
                     />
@@ -228,9 +297,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-ink">{goals.length} active goals</p>
-                  <p className="text-xs text-muted mt-1">You&apos;re doing great! 💚</p>
-                  <Link href="/contributions" className="mt-3 inline-block text-xs font-semibold text-brand-600 border border-brand-200 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors">
-                    View Contributions
+                  <p className="text-xs text-muted mt-1">
+                    {goals.length > 0 ? "You're building momentum! 💚" : "Start a goal to begin saving."}
+                  </p>
+                  <Link href={goals.length > 0 ? "/contributions" : "/goals/new"} className="mt-3 inline-block text-xs font-semibold text-brand-600 border border-brand-200 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors">
+                    {goals.length > 0 ? "View Contributions" : "Create a Goal"}
                   </Link>
                 </div>
               </div>

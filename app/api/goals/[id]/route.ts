@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGoal, goalContributions } from "@/lib/store";
+import {
+  getGoal,
+  goalContributions,
+  goalMembers,
+  getUser,
+  activeWithdrawal,
+  votesFor,
+  quorumFor,
+  refundBreakdown,
+} from "@/lib/store";
 
 export async function GET(
   request: NextRequest,
@@ -18,6 +27,12 @@ export async function GET(
 
     const contributions = goalContributions(id);
     const totalContributed = contributions.reduce((sum, c) => sum + c.amount, 0);
+    const members = goalMembers(id);
+    const owner = getUser(goal.ownerId);
+    const withdrawalReq = activeWithdrawal(id);
+    const votes = withdrawalReq ? votesFor(withdrawalReq.id) : [];
+    const quorum = goal.type === "group" ? quorumFor(id) : null;
+    const refunds = goal.type === "group" ? refundBreakdown(id) : [];
 
     return NextResponse.json({
       success: true,
@@ -30,6 +45,13 @@ export async function GET(
           accountName: `Aidex - ${goal.title}`,
         },
       },
+      contributions,
+      members,
+      owner,
+      withdrawalReq,
+      votes,
+      quorum,
+      refunds,
     });
   } catch (err: any) {
     return NextResponse.json(

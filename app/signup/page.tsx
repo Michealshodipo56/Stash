@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Lock, CheckCircle2, Eye, EyeOff, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, Lock, CheckCircle2, Eye, EyeOff, ShieldCheck, Zap, AlertCircle, AlertTriangle } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -15,31 +15,61 @@ function SignupForm() {
   const { signup, loginAsDemo } = useAuth();
 
   const [fullName, setFullName] = useState("");
-  const [phoneOrEmail, setPhoneOrEmail] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [bmoniWarning, setBmoniWarning] = useState<string | null>(null);
 
-  function handleSignup(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
-    if (!fullName || !phoneOrEmail) return;
+    if (!fullName || (!email && !phone) || !password) return;
 
     setLoading(true);
-    setTimeout(() => {
-      signup(fullName, phoneOrEmail);
-      setLoading(false);
-      // Immediately forward to KYC onboarding
-      router.push(`/onboarding?redirect=${encodeURIComponent(redirectPath)}`);
-    }, 500);
+    setErrorMessage(null);
+    setBmoniWarning(null);
+
+    const result = await signup({
+      name: fullName,
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      password,
+    });
+
+    setLoading(false);
+
+    if (!result.success) {
+      setErrorMessage(result.error || "Signup failed. Please check your details.");
+      return;
+    }
+
+    if (result.bmoniError) {
+      setBmoniWarning(
+        `Account created, but BMONI onboarding responded: "${result.bmoniError}". You can continue to link your Nigerian bank account.`
+      );
+      // Wait a moment so the user sees the real BMONI status message
+      setTimeout(() => {
+        router.push(`/onboarding?redirect=${encodeURIComponent(redirectPath)}`);
+      }, 1500);
+      return;
+    }
+
+    // Immediately forward to KYC onboarding
+    router.push(`/onboarding?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
-  function handleDemoAccess() {
+  async function handleDemoAccess() {
     setLoading(true);
-    setTimeout(() => {
-      loginAsDemo();
-      setLoading(false);
+    setErrorMessage(null);
+    const res = await loginAsDemo();
+    setLoading(false);
+    if (res.success) {
       router.push(redirectPath);
-    }, 400);
+    } else {
+      setErrorMessage(res.error || "Demo login failed");
+    }
   }
 
   return (
@@ -69,12 +99,9 @@ function SignupForm() {
 
             {/* Illustration with green sun doodle */}
             <div className="relative my-6 sm:my-8 flex flex-col items-center justify-center">
-              {/* Green Sun / Starburst Doodle */}
               <div aria-hidden="true" className="text-[#8CC63F] mb-1">
                 <svg viewBox="0 0 36 36" className="w-9 h-9" fill="none">
-                  {/* Central circle */}
                   <circle cx="18" cy="18" r="4.5" stroke="#8CC63F" strokeWidth="2.5" />
-                  {/* 8 rays */}
                   <line x1="18" y1="3" x2="18" y2="33" stroke="#8CC63F" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="5 20" />
                   <line x1="3" y1="18" x2="33" y2="18" stroke="#8CC63F" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="5 20" />
                   <line x1="7.5" y1="7.5" x2="28.5" y2="28.5" stroke="#8CC63F" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="5 20" />
@@ -114,15 +141,30 @@ function SignupForm() {
                 <span>Step 1 of 2: Account Creation</span>
               </div>
               <p className="text-[11px] sm:text-xs text-[#595B52] leading-relaxed font-normal">
-                After creating your credentials, you will complete a quick Tier-1 verification (BVN/NIN + bank linking) to enable goal payouts.
+                Creating your account kicks off BMONI non-custodial onboarding, followed by Tier-1 bank verification for instant goal payouts.
               </p>
             </div>
 
+            {/* Error / Warning alerts */}
+            {errorMessage && (
+              <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 flex items-start gap-2.5 text-xs text-red-700">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {bmoniWarning && (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-2.5 text-xs text-amber-800">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                <span>{bmoniWarning}</span>
+              </div>
+            )}
+
             {/* Signup Form */}
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSignup} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-[#17170F] mb-1.5">
-                  Full Name (Official / As on ID)
+                <label className="block text-xs font-bold text-[#17170F] mb-1">
+                  Full Name (Official / ID Name)
                 </label>
                 <input
                   type="text"
@@ -130,36 +172,53 @@ function SignupForm() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Tolu Adeyemi"
-                  className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-3 sm:py-3.5 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
+                  className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-2.5 sm:py-3 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#17170F] mb-1.5">
-                  Phone Number or Email
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={phoneOrEmail}
-                  onChange={(e) => setPhoneOrEmail(e.target.value)}
-                  placeholder="+234 801 234 5678 or user@email.com"
-                  className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-3 sm:py-3.5 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
-                />
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-2.5 sm:py-3 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+234 801 234 5678"
+                    className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-2.5 sm:py-3 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#17170F] mb-1.5">
+                <label className="block text-xs font-bold text-[#17170F] mb-1">
                   Password
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     required
+                    minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-3 sm:py-3.5 pr-11 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
+                    className="w-full rounded-2xl border border-[#E2DFD2] bg-white px-4 py-2.5 sm:py-3 pr-11 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
                   />
                   <button
                     type="button"
@@ -179,10 +238,10 @@ function SignupForm() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={loading || !fullName || !phoneOrEmail}
+                  disabled={loading || !fullName || (!email && !phone) || !password}
                   className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#8CC63F] hover:bg-[#7db835] text-[#17170F] py-3.5 px-6 text-sm font-bold transition-all shadow-sm hover:shadow disabled:opacity-40"
                 >
-                  <span>{loading ? "Creating account..." : "Continue to Verification"}</span>
+                  <span>{loading ? "Registering & BMONI Setup..." : "Continue to Verification"}</span>
                   <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                 </button>
               </div>

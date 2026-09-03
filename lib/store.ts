@@ -12,19 +12,79 @@ import type {
   GoalType,
   MemberShare,
   Payout,
+  Session,
   User,
   WithdrawalRequest,
   WithdrawalVote,
 } from "./types";
 
 /* ---------------------------------------------------------------------------
- * In-memory singleton. Persisted on globalThis so it survives dev HMR and is
- * shared across requests within a running server (perfect for a single live
- * demo session). Pages that read it are `export const dynamic = "force-dynamic"`.
+ * Persistent storage with disk synchronization.
+ * Data survives dev HMR, page reloads, and server restarts.
  * ------------------------------------------------------------------------- */
+function getFs() {
+  if (typeof window !== "undefined") return null;
+  try {
+    // Dynamic runtime require prevents Turbopack from bundling fs into client components
+    const req = eval("require");
+    return {
+      fs: req("fs"),
+      path: req("path"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function loadStoreFromDisk(): StoreData | null {
+  const nodeMods = getFs();
+  if (!nodeMods) return null;
+  try {
+    const { fs, path } = nodeMods;
+    const dataDir = path.join(process.cwd(), "data");
+    const dataFile = path.join(dataDir, "store.json");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    if (fs.existsSync(dataFile)) {
+      const raw = fs.readFileSync(dataFile, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (!parsed.sessions) parsed.sessions = [];
+      return parsed;
+    }
+  } catch (err) {
+    console.error("Failed to load store from disk:", err);
+  }
+  return null;
+}
+
+export function saveToDisk(data: StoreData): void {
+  const nodeMods = getFs();
+  if (!nodeMods) return;
+  try {
+    const { fs, path } = nodeMods;
+    const dataDir = path.join(process.cwd(), "data");
+    const dataFile = path.join(dataDir, "store.json");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Failed to save store to disk:", err);
+  }
+}
+
 const g = globalThis as unknown as { __stashDB?: StoreData };
 function db(): StoreData {
-  if (!g.__stashDB) g.__stashDB = createSeedData();
+  if (!g.__stashDB) {
+    const fromDisk = loadStoreFromDisk();
+    if (fromDisk) {
+      g.__stashDB = fromDisk;
+    } else {
+      g.__stashDB = createSeedData();
+      saveToDisk(g.__stashDB);
+    }
+  }
   return g.__stashDB;
 }
 
@@ -32,8 +92,85 @@ let idSeq = 1000;
 const genId = (p: string) => `${p}_${(++idSeq).toString(36)}${Date.now().toString(36).slice(-3)}`;
 
 /* — identity — */
+export function upsertUser(user: Partial<User> & { id: string; name: string }): User {
+  const existing = db().users.find((u) => u.id === user.id);
+  if (existing) {
+    Object.assign(existing, user);
+    saveToDisk(db());
+    return existing;
+  }
+  const newUser: User = {
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    email: user.email,
+    passwordHash: user.passwordHash,
+    bmoniUserId: user.bmoniUserId,
+    bmoniError: user.bmoniError,
+    smartWalletId: user.smartWalletId,
+    walletAddress: user.walletAddress,
+    kycStatus: user.kycStatus ?? (user.bmoniUserId ? "active" : "none"),
+    bankAccountNumber: user.bankAccountNumber,
+    bankCode: user.bankCode,
+    bankName: user.bankName,
+    avatarColor: user.avatarColor ?? "#8cc63f",
+    createdAt: user.createdAt ?? new Date().toISOString(),
+  };
+  db().users.push(newUser);
+  saveToDisk(db());
+  return newUser;
+}
+
+export function getUserByEmailOrPhone(identifier: string): User | undefined {
+  const norm = identifier.trim().toLowerCase();
+  const digits = identifier.replace(/[^\d]/g, "");
+  return db().users.find((u) => {
+    if (u.email && u.email.toLowerCase() === norm) return true;
+    if (u.phone) {
+      if (u.phone === identifier.trim()) return true;
+      if (digits && u.phone.replace(/[^\d]/g, "") === digits) return true;
+    }
+    return false;
+  });
+}
+
+/* — sessions — */
+export function saveSession(session: Session): void {
+  const list = db().sessions;
+  const existingIndex = list.findIndex((s) => s.token === session.token);
+  if (existingIndex !== -1) {
+    list[existingIndex] = session;
+  } else {
+    list.push(session);
+  }
+  saveToDisk(db());
+}
+
+export function getSession(token: string): Session | undefined {
+  return db().sessions.find((s) => s.token === token);
+}
+
+export function deleteSession(token: string): void {
+  const list = db().sessions;
+  const idx = list.findIndex((s) => s.token === token);
+  if (idx !== -1) {
+    list.splice(idx, 1);
+    saveToDisk(db());
+  }
+}
+
+
 export function currentUser(): User {
-  return getUser(CURRENT_USER_ID)!;
+  return (
+    getUser(CURRENT_USER_ID) ||
+    db().users[0] || {
+      id: "u_default",
+      name: "Aidex User",
+      kycStatus: "active",
+      avatarColor: "#8cc63f",
+      createdAt: new Date().toISOString(),
+    }
+  );
 }
 export function getUser(id: string): User | undefined {
   return db().users.find((u) => u.id === id);
@@ -179,7 +316,7 @@ export function dashboardSummary(userId: string) {
     totalSaved,
     goalCount: goals.length,
     thisMonth,
-    thisMonthDeltaPct: 18, // demo flourish — no historical series to diff against
+    thisMonthDeltaPct: thisMonth > 0 ? 100 : 0,
     groupContributions,
     groupContributors,
     payoutsReceived,
@@ -247,7 +384,13 @@ export function recentActivity(userId: string, limit = 8): ActivityItem[] {
   return items.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, limit);
 }
 
-export function getStreak() {
+export function getStreak(userId?: string) {
+  if (userId) {
+    const userContribs = db().contributions.filter((c) => c.contributorUserId === userId);
+    if (userContribs.length === 0) {
+      return { days: 0, week: [false, false, false, false, false, false, false] };
+    }
+  }
   return db().streak;
 }
 
@@ -263,8 +406,16 @@ export async function createGoal(input: {
   frequency: Frequency;
   emoji?: string;
   ownerId?: string;
+  ownerName?: string;
 }): Promise<Goal> {
   const ownerId = input.ownerId ?? CURRENT_USER_ID;
+  if (ownerId && !getUser(ownerId)) {
+    upsertUser({
+      id: ownerId,
+      name: input.ownerName || "Goal Owner",
+      kycStatus: "active",
+    });
+  }
   const va = await bmoni.issueVirtualAccount(input.title);
   const goal: Goal = {
     id: genId("g"),
@@ -295,6 +446,7 @@ export async function createGoal(input: {
       joinedAt: goal.createdAt,
     });
   }
+  saveToDisk(db());
   return goal;
 }
 
@@ -311,11 +463,12 @@ export async function addContribution(input: {
     contributorName: input.contributorName,
     contributorUserId: input.contributorUserId,
     amount: input.amount,
-    bmoniReference: input.bmoniReference ?? `TRX${Math.floor(Math.random() * 1e9)}`,
+    bmoniReference: input.bmoniReference ?? `TRX_${Date.now().toString(36)}_${(++idSeq).toString(36)}`,
     receivedAt: new Date().toISOString(),
   };
   db().contributions.push(contribution);
   await maybeCompleteGoal(input.goalId);
+  saveToDisk(db());
   return contribution;
 }
 
@@ -422,6 +575,7 @@ export async function removeMemberAndAdjust(
 
   const newPerMemberInstallment = Math.ceil(newTotalInstallment / memberCount);
   goal.installmentAmount = newPerMemberInstallment;
+  saveToDisk(db());
 
   return {
     refundedAmount,
@@ -435,8 +589,8 @@ export async function closeGoal(goalId: string): Promise<void> {
   const goal = getGoal(goalId);
   if (!goal) return;
   goal.status = "completed";
+  saveToDisk(db());
 }
-
 
 export function createWithdrawal(input: {
   goalId: string;
@@ -462,6 +616,7 @@ export function createWithdrawal(input: {
     vote: true,
     votedAt: req.createdAt,
   });
+  saveToDisk(db());
   return req;
 }
 
@@ -499,6 +654,7 @@ export async function castVote(input: {
     await executeRefunds(req.goalId);
     executed = true;
   }
+  saveToDisk(db());
   return { quorum, executed };
 }
 
@@ -533,10 +689,15 @@ export async function executeRefunds(goalId: string): Promise<Payout[]> {
   req.status = "approved";
   req.resolvedAt = new Date().toISOString();
   goal.status = "withdrawn";
+  saveToDisk(db());
   return created;
 }
 
-/** Reset to seed — handy to re-run the demo from a clean slate. */
+/** Reset to demo seed — handy to re-run the demo from sample state. */
 export function resetDemo(): void {
-  g.__stashDB = createSeedData();
+  const { createDemoSeedData } = require("./seed");
+  const data = createDemoSeedData();
+  g.__stashDB = data;
+  saveToDisk(data);
 }
+

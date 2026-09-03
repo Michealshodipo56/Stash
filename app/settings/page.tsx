@@ -1,27 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { DashboardSidebar } from "@/app/components/DashboardSidebar";
 import { Avatar } from "@/app/components/Avatar";
-import { USERS_MAP } from "@/lib/mock-data";
-import { User, Wallet, Landmark, ShieldCheck, Check, Save } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext";
+import { User, Wallet, Landmark, ShieldCheck, Check, Save, ArrowRight } from "lucide-react";
+import { NIGERIAN_BANKS } from "@/lib/banks";
 
 export default function SettingsPage() {
-  const user = USERS_MAP.get("u-tolu")!;
+  const { user, updateKycAndBank, isLoading } = useAuth();
 
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email ?? "tolu@university.edu.ng");
-  const [phone, setPhone] = useState(user.phone ?? "+234 801 234 5678");
-
-  // Bank Offramp details
-  const [bankName, setBankName] = useState(user.bankName ?? "GTBank");
-  const [accountNumber, setAccountNumber] = useState(user.bankAccountNumber ?? "0123456789");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [bankName, setBankName] = useState("Guaranty Trust Bank (GTBank)");
+  const [accountNumber, setAccountNumber] = useState("");
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      if (user.phoneOrEmail?.includes("@")) {
+        setEmail(user.phoneOrEmail);
+      } else {
+        setPhone(user.phoneOrEmail || "");
+      }
+      if (user.bankAccount) {
+        setBankName(user.bankAccount.bankName || "Guaranty Trust Bank (GTBank)");
+        setAccountNumber(user.bankAccount.accountNumber || "");
+      }
+    }
+  }, [user]);
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
+
+    updateKycAndBank({
+      fullName: name || user.name,
+      accountName: name || user.name,
+      ninBvn: user.ninBvn || "22233344455",
+      bankName,
+      accountNumber,
+    });
+
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <p className="text-sm font-medium text-muted">Loading settings...</p>
+      </div>
+    );
   }
 
   return (
@@ -48,11 +81,11 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Avatar name={name} color={user.avatarColor} size="lg" />
+              <Avatar name={name || user.name} color="#8cc63f" size="lg" />
               <div>
-                <p className="font-semibold text-ink">{name}</p>
+                <p className="font-semibold text-ink">{name || user.name}</p>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full mt-1">
-                  <ShieldCheck className="h-3.5 w-3.5" /> Tier 1 Verified (NIN / BVN)
+                  <ShieldCheck className="h-3.5 w-3.5" /> {user.isKycVerified ? "Tier 1 Verified (NIN / BVN)" : "KYC Pending"}
                 </span>
               </div>
             </div>
@@ -73,6 +106,7 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   value={email}
+                  placeholder="name@example.com"
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-400"
                 />
@@ -83,6 +117,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   value={phone}
+                  placeholder="+234 800 000 0000"
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-400"
                 />
@@ -110,12 +145,25 @@ export default function SettingsPage() {
                   onChange={(e) => setBankName(e.target.value)}
                   className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-400"
                 >
-                  <option value="GTBank">Guaranty Trust Bank (GTBank)</option>
-                  <option value="Access Bank">Access Bank</option>
-                  <option value="Kuda Bank">Kuda Microfinance Bank</option>
-                  <option value="OPay">OPay Digital Services</option>
-                  <option value="Zenith Bank">Zenith Bank</option>
-                  <option value="First Bank">First Bank of Nigeria</option>
+                  <option value="">Select your bank ({NIGERIAN_BANKS.length} banks available)...</option>
+                  <optgroup label="Popular Nigerian Banks">
+                    <option value="Guaranty Trust Bank (GTBank)">Guaranty Trust Bank (GTBank)</option>
+                    <option value="Access Bank">Access Bank</option>
+                    <option value="Zenith Bank">Zenith Bank</option>
+                    <option value="First Bank of Nigeria">First Bank of Nigeria</option>
+                    <option value="United Bank for Africa (UBA)">United Bank for Africa (UBA)</option>
+                    <option value="OPay Digital Services (PayCom)">OPay Digital Services (PayCom)</option>
+                    <option value="PalmPay">PalmPay</option>
+                    <option value="Moniepoint Microfinance Bank">Moniepoint Microfinance Bank</option>
+                    <option value="Kuda Bank">Kuda Bank</option>
+                  </optgroup>
+                  <optgroup label="All Nigerian Commercial, Digital & Microfinance Banks (A - Z)">
+                    {NIGERIAN_BANKS.map((b) => (
+                      <option key={b.code + b.name} value={b.name}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
@@ -124,6 +172,7 @@ export default function SettingsPage() {
                 <input
                   type="text"
                   maxLength={10}
+                  placeholder="0123456789"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
                   className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink font-mono focus:outline-none focus:ring-2 focus:ring-brand-400"
@@ -132,8 +181,8 @@ export default function SettingsPage() {
             </div>
 
             <div className="rounded-xl bg-surface-2 p-3 text-xs text-muted flex items-center justify-between">
-              <span>Account Name Verified: <strong>TOLUWALASE ADEYEMI</strong></span>
-              <span className="text-brand-600 font-semibold">Match confirmed ✓</span>
+              <span>Account Name: <strong>{user.bankAccount?.accountName || name || user.name}</strong></span>
+              <span className="text-brand-600 font-semibold">{user.isKycVerified ? "Verified ✓" : "Pending Verification"}</span>
             </div>
           </div>
 
@@ -149,22 +198,34 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-2 text-xs font-mono">
-              <div className="flex items-center justify-between py-1 border-b border-line">
-                <span className="text-muted">BMONI User ID:</span>
-                <span className="text-ink font-semibold">{user.bmoniUserId ?? "bm_user_tolu01"}</span>
+            {user.smartWalletId ? (
+              <div className="space-y-2 text-xs font-mono">
+                <div className="flex items-center justify-between py-1 border-b border-line">
+                  <span className="text-muted">BMONI User ID:</span>
+                  <span className="text-ink font-semibold">{user.bmoniUserId || "Pending BMONI Setup"}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-line">
+                  <span className="text-muted">Smart Wallet ID:</span>
+                  <span className="text-ink font-semibold">{user.smartWalletId}</span>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-muted">On-Chain Wallet Address:</span>
+                  <span className="text-ink font-semibold truncate max-w-[240px]">
+                    {user.walletAddress || "Pending generation"}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-line">
-                <span className="text-muted">Smart Wallet ID:</span>
-                <span className="text-ink font-semibold">{user.smartWalletId ?? "sw_0x8f2a419"}</span>
+            ) : (
+              <div className="py-3 text-center">
+                <p className="text-xs text-muted">Complete KYC onboarding to generate your non-custodial smart wallet.</p>
+                <Link
+                  href="/onboarding"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 mt-2 hover:underline"
+                >
+                  Verify Now <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
-              <div className="flex items-center justify-between py-1">
-                <span className="text-muted">On-Chain Wallet Address:</span>
-                <span className="text-ink font-semibold truncate max-w-[240px]">
-                  {user.walletAddress ?? "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="flex justify-end">

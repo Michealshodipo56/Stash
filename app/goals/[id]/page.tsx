@@ -24,6 +24,7 @@ import {
 import { Logo } from "@/app/components/Logo";
 import { ProgressBar } from "@/app/components/ProgressBar";
 import { Avatar } from "@/app/components/Avatar";
+import { useAuth } from "@/app/context/AuthContext";
 import {
   getGoal,
   goalMembers,
@@ -46,7 +47,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
   const refresh = () => setTick((t) => t + 1);
 
   const goal = getGoal(id);
-  if (!goal) notFound();
+  if (!goal) return notFound();
 
   const members = goalMembers(id);
   const contributions = goalContributions(id);
@@ -84,12 +85,21 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
 
+  const { user } = useAuth();
+
   // Form states
   const [depositAmount, setDepositAmount] = useState("15000");
-  const [contributorUser, setContributorUser] = useState("u_tolu");
-  const [contributorName, setContributorName] = useState("Tolu Adeyemi");
+  const [contributorUser, setContributorUser] = useState(user?.id || "");
+  const [contributorName, setContributorName] = useState(user?.name || "Member");
   const [withdrawReason, setWithdrawReason] = useState("Goal no longer needed — item acquired through another channel.");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.id && !contributorUser) {
+      setContributorUser(user.id);
+      setContributorName(user.name);
+    }
+  }, [user]);
 
   // Flow 5a: Admin Remove Member
   async function handleRemoveMember(memberUserId: string) {
@@ -131,7 +141,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
         body: JSON.stringify({
           goalId: id,
           contributorName,
-          contributorUserId: contributorUser,
+          contributorUserId: contributorUser === "u_custom" ? undefined : contributorUser,
           amount: Number(depositAmount),
         }),
       });
@@ -156,7 +166,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
         body: JSON.stringify({
           action: "propose",
           goalId: id,
-          requestedBy: "u_tolu",
+          requestedBy: user?.id || goal?.ownerId || "u_creator",
           reason: withdrawReason,
         }),
       });
@@ -171,7 +181,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   // Handle voting
-  async function handleVote(approve: boolean, voterId: string = "u_tolu") {
+  async function handleVote(approve: boolean, voterId?: string) {
     if (!withdrawalReq) return;
     try {
       const res = await fetch("/api/withdrawals", {
@@ -180,7 +190,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
         body: JSON.stringify({
           action: "vote",
           requestId: withdrawalReq.id,
-          voterId,
+          voterId: voterId || user?.id || goal?.ownerId || "u_voter",
           vote: approve,
         }),
       });
@@ -333,6 +343,8 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
             refunds={refunds}
             pool={saved}
             onVote={handleVote}
+            voterName={user?.name || owner?.name || "Admin"}
+            voterId={user?.id || goal.ownerId}
           />
         ) : isGroup && goal.status === "active" && (
           <div className="rounded-2xl border border-[#E9E8E0] bg-white p-4 flex items-center justify-between shadow-2xs">
@@ -486,17 +498,20 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
                   value={contributorUser}
                   onChange={(e) => {
                     setContributorUser(e.target.value);
-                    const userObj = getUser(e.target.value);
-                    if (userObj) setContributorName(userObj.name);
+                    if (e.target.value === user?.id) {
+                      setContributorName(user.name);
+                    } else {
+                      const userObj = getUser(e.target.value);
+                      if (userObj) setContributorName(userObj.name);
+                    }
                   }}
                   className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs font-medium text-[#17170F] focus:outline-none focus:ring-2 focus:ring-brand-400"
                 >
-                  <option value="u_tolu">Tolu Adeyemi (you)</option>
-                  <option value="u_amaka">Amaka Obi</option>
-                  <option value="u_bayo">Bayo Ade</option>
-                  <option value="u_chinedu">Chinedu Eze</option>
-                  <option value="u_ngozi">Ngozi Ali</option>
-                  <option value="u_kemi">Kemi Sanni</option>
+                  <option value={user?.id || "u_creator"}>{user?.name || "You"} (you)</option>
+                  {members.filter((m) => m.userId !== user?.id).map((m) => {
+                    const u = getUser(m.userId);
+                    return <option key={m.userId} value={m.userId}>{u?.name || "Member"}</option>;
+                  })}
                   <option value="u_custom">External Contributor (No Account Required)</option>
                 </select>
               </div>
@@ -750,13 +765,15 @@ function ContributionsList({ contributions }: { contributions: ReturnType<typeof
 
 /* ── Quorum Governance Card (Flow 5b) ──────────────────────── */
 function QuorumGovernanceCard({
-  request, quorum, refunds, pool, onVote,
+  request, quorum, refunds, pool, onVote, voterName, voterId,
 }: {
   request: NonNullable<ReturnType<typeof activeWithdrawal>>;
   quorum: NonNullable<ReturnType<typeof quorumFor>>;
   refunds: ReturnType<typeof refundBreakdown>;
   pool: number;
   onVote: (approve: boolean, voterId: string) => void;
+  voterName?: string;
+  voterId?: string;
 }) {
   const requester = getUser(request.requestedBy);
 
@@ -819,21 +836,21 @@ function QuorumGovernanceCard({
       {/* Vote controls if quorum not met yet */}
       {!quorum.met && (
         <div className="bg-white border border-[#E9E8E0] rounded-xl p-3.5 space-y-2">
-          <p className="text-xs text-gray-600 font-semibold">Cast live vote as Admin (Tolu Adeyemi):</p>
+          <p className="text-xs text-gray-600 font-semibold">Cast live vote as {voterName || "Admin"}:</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               id="vote-approve-btn"
               type="button"
-              onClick={() => onVote(true, "u_tolu")}
+              onClick={() => onVote(true, voterId || request.requestedBy)}
               className="flex items-center justify-center gap-2 rounded-xl bg-brand-500 text-[#17170F] py-2.5 text-xs font-bold hover:bg-brand-400 transition-colors"
             >
               <ThumbsUp className="h-3.5 w-3.5" />
-              Approve (Triggers Quorum 🎉)
+              Approve
             </button>
             <button
               id="vote-reject-btn"
               type="button"
-              onClick={() => onVote(false, "u_tolu")}
+              onClick={() => onVote(false, voterId || request.requestedBy)}
               className="flex items-center justify-center gap-2 rounded-xl border border-coral-300 bg-coral-50 text-coral-600 py-2.5 text-xs font-bold hover:bg-coral-100 transition-colors"
             >
               <ThumbsDown className="h-3.5 w-3.5" />
