@@ -1,23 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Wallet, ArrowRight, CheckCircle2, Building2 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/app/context/AuthContext";
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/dashboard";
+
+  const { user, updateKycAndBank } = useAuth();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Form inputs
-  const [fullName, setFullName] = useState("Tolu Adeyemi");
-  const [phone, setPhone] = useState("+234 801 234 5678");
-  const [ninBvn, setNinBvn] = useState("22334455667");
-  const [bankName, setBankName] = useState("GTBank");
-  const [accountNumber, setAccountNumber] = useState("0123456789");
+  const [fullName, setFullName] = useState(user?.name || "Tolu Adeyemi");
+  const [phone, setPhone] = useState(user?.phoneOrEmail || "+234 801 234 5678");
+  const [ninBvn, setNinBvn] = useState(user?.ninBvn || "22334455667");
+  const [bankName, setBankName] = useState(user?.bankAccount?.bankName || "GTBank");
+  const [accountNumber, setAccountNumber] = useState(user?.bankAccount?.accountNumber || "0123456789");
 
   const [loading, setLoading] = useState(false);
   const [walletDetails, setWalletDetails] = useState<{
@@ -30,16 +35,27 @@ export default function OnboardingPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call to /api/onboard (BMONI user + smart wallet creation)
+    const generatedWallet = {
+      bmoniUserId: `bm_usr_${Math.random().toString(36).substring(2, 9)}`,
+      smartWalletId: `sw_${Math.random().toString(36).substring(2, 9)}`,
+      walletAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
+    };
+
     setTimeout(() => {
       setLoading(false);
-      setWalletDetails({
-        bmoniUserId: `bm_usr_${Math.random().toString(36).substring(2, 9)}`,
-        smartWalletId: `sw_${Math.random().toString(36).substring(2, 9)}`,
-        walletAddress: `0x${Math.random().toString(16).substring(2, 42)}`,
+      setWalletDetails(generatedWallet);
+
+      // Save to AuthContext
+      updateKycAndBank({
+        ninBvn,
+        bankName,
+        accountNumber,
+        accountName: fullName,
+        ...generatedWallet,
       });
+
       setStep(3);
-    }, 1500);
+    }, 1200);
   }
 
   return (
@@ -59,7 +75,7 @@ export default function OnboardingPage() {
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-brand-600">BMONI Embedded Onboarding</span>
           <h1 className="font-display text-3xl font-bold text-ink mt-1">Get verified &amp; setup wallet</h1>
-          <p className="text-muted text-sm mt-1">Complete your Tier-1 KYC to enable dedicated NGN Virtual Accounts and instant payouts.</p>
+          <p className="text-muted text-sm mt-1">Complete your Tier-1 KYC to enable dedicated NGN Virtual Accounts and instant goal payouts.</p>
         </div>
 
         {/* Step Indicator */}
@@ -141,7 +157,7 @@ export default function OnboardingPage() {
                 onChange={(e) => setBankName(e.target.value)}
                 className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-400"
               >
-                <option value="GTBank">Guaranty Trust Bank (GTBank)</option>
+                <option value="Guaranty Trust Bank (GTBank)">Guaranty Trust Bank (GTBank)</option>
                 <option value="Access Bank">Access Bank</option>
                 <option value="Kuda Bank">Kuda Microfinance Bank</option>
                 <option value="OPay">OPay Digital Services</option>
@@ -189,7 +205,7 @@ export default function OnboardingPage() {
 
             <div>
               <h2 className="font-display text-2xl font-bold text-ink">BMONI Smart Wallet Ready!</h2>
-              <p className="text-xs text-muted mt-1">Your non-custodial smart wallet has been created and linked to your NIN/BVN.</p>
+              <p className="text-xs text-muted mt-1">Your non-custodial smart wallet has been created and linked to your NIN/BVN &amp; payout bank account.</p>
             </div>
 
             <div className="rounded-xl border border-line bg-surface p-4 text-left space-y-2 text-xs font-mono">
@@ -201,6 +217,10 @@ export default function OnboardingPage() {
                 <span className="text-muted">Smart Wallet ID:</span>
                 <span className="font-bold text-ink">{walletDetails.smartWalletId}</span>
               </div>
+              <div className="flex justify-between border-b border-line pb-1">
+                <span className="text-muted">Payout Account:</span>
+                <span className="font-bold text-ink">{bankName} ({accountNumber})</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-muted">Wallet Address:</span>
                 <span className="font-bold text-ink truncate max-w-[180px]">{walletDetails.walletAddress}</span>
@@ -208,14 +228,22 @@ export default function OnboardingPage() {
             </div>
 
             <button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push(redirectPath)}
               className="w-full flex items-center justify-center gap-2 rounded-full bg-ink text-cream py-3 text-sm font-semibold hover:bg-ink-hover transition-colors"
             >
-              Go to Dashboard <ArrowRight className="h-4 w-4" />
+              {redirectPath.includes("goals/new") ? "Proceed to Create Goal" : "Go to Dashboard"} <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         )}
       </main>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-cream flex items-center justify-center text-sm text-muted">Loading...</div>}>
+      <OnboardingContent />
+    </Suspense>
   );
 }

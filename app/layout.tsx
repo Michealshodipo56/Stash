@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
 import { BRAND } from "@/lib/brand";
+import { AuthProvider } from "@/app/context/AuthContext";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -26,7 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bricolage.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-cream font-sans text-ink antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

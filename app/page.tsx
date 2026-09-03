@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Play,
   Shield,
+  ShieldCheck,
   Users,
   Lock,
   Zap,
@@ -58,7 +59,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#FBF9F4] text-[#17170F] font-sans selection:bg-[#d0e8a4] selection:text-[#17170F] overflow-x-hidden">
       {/* ── HEADER / NAVIGATION ────────────────────────── */}
       <header className="sticky top-0 z-50 bg-[#FBF9F4]/90 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-6 md:px-12 py-5 flex items-center justify-between gap-6">
+        <div className="mx-auto max-w-7xl px-6 md:px-12 py-3.5 flex items-center justify-between gap-6">
           <Link href="/" className="shrink-0">
             <Logo className="text-2xl tracking-tight" />
           </Link>
@@ -71,28 +72,36 @@ export default function LandingPage() {
             <a href="#faqs" className="hover:text-[#17170F] transition-colors">FAQs</a>
           </nav>
 
-          <Link
-            href="/dashboard"
-            id="nav-start-btn"
-            className="rounded-full bg-[#17170F] text-[#8CC63F] px-5 py-2 text-xs md:text-sm font-semibold hover:bg-black transition-all shrink-0 shadow-sm"
-          >
-            Start a goal
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="text-xs md:text-sm font-semibold text-[#17170F] hover:text-black px-3 py-1.5 transition-colors"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/goals/new"
+              id="nav-start-btn"
+              className="rounded-full bg-[#17170F] text-[#8CC63F] px-5 py-2 text-xs md:text-sm font-semibold hover:bg-black transition-all shrink-0 shadow-sm"
+            >
+              Start a goal
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="space-y-16 md:space-y-24">
+      <main className="space-y-12 md:space-y-16">
         {/* ── HERO SECTION ─────────────────────────────── */}
-        <section className="relative mx-auto max-w-7xl px-6 md:px-12 pt-8 md:pt-16 pb-12 overflow-hidden">
-          <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        <section className="relative mx-auto max-w-7xl px-6 md:px-12 pt-0 sm:pt-1 pb-6 sm:pb-8 overflow-hidden">
+          <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-start">
             {/* Left Column */}
-            <div className="lg:col-span-6 z-10 space-y-8">
+            <div className="lg:col-span-6 z-10 space-y-6 pt-0">
               <div>
                 <motion.h1
-                  initial={{ opacity: 0, y: 36 }}
+                  initial={{ opacity: 0, y: 28 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-                  className="font-display text-[44px] sm:text-[56px] lg:text-[64px] font-extrabold text-[#17170F] leading-[1.06] tracking-tight"
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className="font-display text-[48px] sm:text-[60px] lg:text-[68px] font-extrabold text-[#17170F] leading-[1.04] tracking-tight"
                 >
                   Big things start<br />
                   with{" "}
@@ -101,7 +110,7 @@ export default function LandingPage() {
                     {/* Hand-drawn curved doodle underline */}
                     <svg
                       viewBox="0 0 250 20"
-                      className="absolute -bottom-3 left-0 w-full overflow-visible"
+                      className="absolute -bottom-2.5 left-0 w-full overflow-visible"
                       fill="none"
                     >
                       <path
@@ -115,10 +124,10 @@ export default function LandingPage() {
                 </motion.h1>
 
                 <motion.p
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.55, delay: 0.15 }}
-                  className="mt-6 text-[15px] sm:text-base text-[#595B52] leading-relaxed max-w-lg font-normal"
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="mt-5 text-[15px] sm:text-base text-[#595B52] leading-relaxed max-w-lg font-normal"
                 >
                   Plan your goal, save on a schedule, and hit your target.
                   <br />
@@ -130,23 +139,23 @@ export default function LandingPage() {
 
               {/* Action Buttons */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex flex-wrap items-center gap-4"
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex flex-wrap items-center gap-4 pt-1"
               >
                 <Link
-                  href="/dashboard"
+                  href="/goals/new"
                   id="hero-start-btn"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#8CC63F] text-[#17170F] px-7 py-3.5 text-sm font-bold hover:bg-[#7db835] transition-all shadow-sm"
+                  className="inline-flex items-center gap-3 rounded-full bg-[#8CC63F] hover:bg-[#7db835] text-[#17170F] px-8 py-3.5 text-sm font-bold transition-all shadow-sm group"
                 >
                   <span>Start a goal</span>
-                  <ArrowRight className="h-4 w-4 stroke-[2.5]" />
+                  <ArrowRight className="h-4 w-4 stroke-[2.5] group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 <a
                   href="#how-it-works"
                   id="hero-how-btn"
-                  className="inline-flex items-center gap-3 rounded-full border border-[#E5E3D8] bg-white/80 hover:bg-white text-[#17170F] px-6 py-3.5 text-sm font-semibold transition-all shadow-2xs"
+                  className="inline-flex items-center gap-3 rounded-full border border-[#E5E3D8] bg-white/90 hover:bg-white text-[#17170F] px-7 py-3.5 text-sm font-semibold transition-all shadow-2xs"
                 >
                   <span>How it works</span>
                   <span className="flex items-center justify-center w-5 h-5 rounded-full border border-[#17170F]/20 text-[#17170F]">
@@ -159,7 +168,7 @@ export default function LandingPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.45 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
                 className="pt-2 flex items-center gap-4"
               >
                 <div className="flex -space-x-2.5">
@@ -168,7 +177,7 @@ export default function LandingPage() {
                       key={i}
                       src={src}
                       alt="Student avatar"
-                      className="w-9 h-9 rounded-full border-2 border-white object-cover shadow-2xs"
+                      className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-2xs"
                     />
                   ))}
                 </div>
@@ -176,18 +185,18 @@ export default function LandingPage() {
                   <p className="text-[13px] text-[#595B52] leading-tight">
                     Trusted by students
                     <br />
-                    <span className="text-[#17170F] font-semibold">across Nigeria</span>
+                    <span className="text-[#17170F] font-bold">across Nigeria</span>
                   </p>
                   {/* Decorative green spring doodle */}
                   <svg
                     viewBox="0 0 65 24"
-                    className="w-12 h-5 text-[#8CC63F]"
+                    className="w-12 h-6 text-[#8CC63F]"
                     fill="none"
                   >
                     <path
                       d="M 2 16 C 15 28, 25 2, 35 15 C 45 28, 55 5, 62 10"
                       stroke="#8CC63F"
-                      strokeWidth="2.5"
+                      strokeWidth="2.8"
                       strokeLinecap="round"
                     />
                   </svg>
@@ -195,94 +204,121 @@ export default function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Right Column — Dual Phone Mockups */}
-            <div className="lg:col-span-6 relative flex items-center justify-center pt-8 lg:pt-0">
-              {/* Vibrant green radial background glow */}
+            {/* Right Column — Dual Phone Mockups & Organic Green Backdrop */}
+            <div className="lg:col-span-6 relative flex items-center justify-center pt-2 lg:pt-0">
+              {/* Organic Hand-Drawn Lime Green Backdrop Shape */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute w-[420px] h-[420px] sm:w-[500px] sm:h-[500px] rounded-full opacity-60 blur-2xl -top-10 right-0 sm:right-10"
-                style={{ background: "radial-gradient(circle, #b8dd74 0%, #8cc63f40 50%, transparent 75%)" }}
-              />
+                className="pointer-events-none absolute w-[490px] sm:w-[580px] h-[540px] sm:h-[620px] -top-8 -right-4 sm:right-0 z-0 flex items-center justify-center select-none"
+              >
+                <svg
+                  viewBox="0 0 560 620"
+                  className="w-full h-full overflow-visible"
+                  fill="none"
+                >
+                  {/* Multi-lobed green organic shape exactly matching design */}
+                  <path
+                    d="M 230 45 C 380 15, 515 75, 535 210 C 555 350, 525 485, 450 550 C 385 605, 290 580, 225 565 C 155 615, 80 575, 65 480 C 5 445, -5 325, 25 225 C 50 145, 115 70, 230 45 Z"
+                    fill="#A2D84C"
+                  />
+                  {/* Distinctive white/light dashed sketch outline along left curve */}
+                  <path
+                    d="M 45 180 C 18 260, 20 370, 65 440"
+                    stroke="rgba(255,255,255,0.75)"
+                    strokeWidth="3.5"
+                    strokeDasharray="8 7"
+                    strokeLinecap="round"
+                  />
+                  {/* Bottom right decorative sketched accent */}
+                  <path
+                    d="M 465 520 C 490 545, 505 555, 525 540"
+                    stroke="#80B527"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
 
-              <div className="relative w-full max-w-[480px] h-[580px] sm:h-[620px] flex items-center justify-center">
+              {/* Phones Container */}
+              <div className="relative w-full max-w-[500px] h-[600px] sm:h-[640px] flex items-center justify-center z-10">
                 {/* Back Phone (Right detail screen) */}
                 <motion.div
-                  initial={{ opacity: 0, x: 50, rotate: 6 }}
-                  animate={{ opacity: 1, x: 0, rotate: 4 }}
+                  initial={{ opacity: 0, x: 60, rotate: 9 }}
+                  animate={{ opacity: 1, x: 0, rotate: 7 }}
                   transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute right-0 sm:right-2 top-8 z-10 w-[240px] sm:w-[260px] rounded-[36px] bg-[#17170F] p-2.5 shadow-2xl border-2 border-[#17170F]"
+                  className="absolute right-0 sm:right-3 top-10 z-10 w-[245px] sm:w-[265px] rounded-[44px] bg-[#11130E] p-2.5 shadow-2xl border-2 border-[#11130E]"
                 >
-                  <div className="rounded-[28px] bg-white overflow-hidden text-[#17170F] text-[11px] pb-3 select-none">
+                  <div className="rounded-[36px] bg-[#FCFBF8] overflow-hidden text-[#17170F] text-[11px] pb-3.5 select-none shadow-inner">
                     {/* Status Bar */}
-                    <div className="px-5 pt-2 flex items-center justify-between text-[10px] font-semibold text-gray-500">
+                    <div className="px-5 pt-3 pb-1 flex items-center justify-between text-[10px] font-semibold text-gray-500">
                       <span>9:41</span>
-                      <div className="w-16 h-3.5 rounded-full bg-[#17170F]" />
-                      <div className="flex items-center gap-1 text-[9px]">●●●</div>
+                      <div className="w-16 h-3.5 rounded-full bg-[#11130E] -mt-0.5" />
+                      <div className="flex items-center gap-1 text-[8px]">●●●</div>
                     </div>
 
                     {/* Header */}
-                    <div className="px-3 pt-2 pb-1 flex items-center justify-between border-b border-gray-100">
-                      <div className="flex items-center gap-1 font-bold text-xs">
-                        <ChevronLeft className="w-3.5 h-3.5" />
+                    <div className="px-3.5 pt-1.5 pb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5]" />
                         <span>MacBook Air</span>
                       </div>
-                      <Plus className="w-3.5 h-3.5 text-gray-400" />
+                      <Plus className="w-3.5 h-3.5 text-gray-400 stroke-[2.5]" />
                     </div>
 
                     {/* Tabs */}
-                    <div className="px-3 pt-2 flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#e4f1cb] text-[#426a17] font-bold text-[9px]">
+                    <div className="px-3.5 pt-1 flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-[#E5F2D0] text-[#3E6C15] font-bold text-[10px]">
                         Overview
                       </span>
-                      <span className="text-gray-400 text-[9px]">Contributions</span>
+                      <span className="text-gray-400 text-[10px] font-medium px-2">Contributions</span>
                     </div>
 
                     {/* Amount & Progress */}
-                    <div className="px-3 pt-2">
+                    <div className="px-3.5 pt-3">
                       <div className="flex items-baseline justify-between">
-                        <span className="font-display font-extrabold text-base tracking-tight">₦345,600</span>
+                        <span className="font-display font-extrabold text-[17px] tracking-tight">₦345,600</span>
                       </div>
-                      <div className="flex items-center justify-between text-[9px] text-gray-500 mt-0.5">
+                      <div className="flex items-center justify-between text-[10px] text-gray-500 mt-0.5">
                         <span>of ₦480,000</span>
                         <span className="font-bold text-[#8CC63F]">72%</span>
                       </div>
-                      <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                      <div className="mt-1.5 h-2 w-full rounded-full bg-gray-100 overflow-hidden">
                         <div className="h-full bg-[#8CC63F] rounded-full w-[72%]" />
                       </div>
                     </div>
 
                     {/* Three Mini Metric Boxes */}
-                    <div className="grid grid-cols-3 gap-1 px-3 pt-2">
-                      <div className="bg-[#F8F7F2] p-1.5 rounded-lg text-center">
+                    <div className="grid grid-cols-3 gap-1.5 px-3.5 pt-3">
+                      <div className="bg-[#F4F3EE] p-2 rounded-xl text-center">
                         <p className="font-bold text-[10px]">₦7,077</p>
-                        <p className="text-[7px] text-gray-500">per day</p>
+                        <p className="text-[8px] text-gray-500">per day</p>
                       </div>
-                      <div className="bg-[#F8F7F2] p-1.5 rounded-lg text-center">
+                      <div className="bg-[#F4F3EE] p-2 rounded-xl text-center">
                         <p className="font-bold text-[10px]">19</p>
-                        <p className="text-[7px] text-gray-500">days left</p>
+                        <p className="text-[8px] text-gray-500">days left</p>
                       </div>
-                      <div className="bg-[#F8F7F2] p-1.5 rounded-lg text-center">
+                      <div className="bg-[#F4F3EE] p-2 rounded-xl text-center">
                         <p className="font-bold text-[9px]">12 Jun, 2026</p>
-                        <p className="text-[7px] text-gray-500">deadline</p>
+                        <p className="text-[8px] text-gray-500">deadline</p>
                       </div>
                     </div>
 
                     {/* Recent Activity */}
-                    <div className="px-3 pt-2">
-                      <p className="text-[9px] font-bold text-gray-700 mb-1">Recent activity</p>
+                    <div className="px-3.5 pt-3">
+                      <p className="text-[10px] font-bold text-gray-700 mb-1.5">Recent activity</p>
                       <div className="space-y-1.5">
                         {[
                           { name: "Amaka", time: "Just now", amount: "+₦5,000", tag: "Just now", img: AVATAR_PHOTOS[0] },
-                          { name: "Bayo", time: "30 mins ago", amount: "+₦3,000", tag: "30 pledges", img: AVATAR_PHOTOS[1] },
-                          { name: "Chinedu", time: "2 hours ago", amount: "+₦2,000", tag: "2 friends", img: AVATAR_PHOTOS[2] },
+                          { name: "Bayo", time: "30 mins ago", amount: "+₦3,000", tag: "30 mins ago", img: AVATAR_PHOTOS[1] },
+                          { name: "Chinedu", time: "2 hours ago", amount: "+₦2,000", tag: "2 hours ago", img: AVATAR_PHOTOS[2] },
                           { name: "You", time: "Yesterday", amount: "+₦7,000", tag: "Yesterday", img: AVATAR_PHOTOS[3] },
                         ].map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-[8px] py-0.5">
+                          <div key={idx} className="flex items-center justify-between text-[9px] py-0.5">
                             <div className="flex items-center gap-1.5">
-                              <img src={item.img} alt={item.name} className="w-4 h-4 rounded-full object-cover" />
+                              <img src={item.img} alt={item.name} className="w-5 h-5 rounded-full object-cover shadow-2xs" />
                               <div>
                                 <p className="font-bold text-gray-800 leading-none">{item.name}</p>
-                                <p className="text-gray-400 text-[7px]">{item.time}</p>
+                                <p className="text-gray-400 text-[8px]">{item.time}</p>
                               </div>
                             </div>
                             <div className="text-right">
@@ -295,61 +331,69 @@ export default function LandingPage() {
                     </div>
 
                     {/* Add Money Button */}
-                    <div className="px-3 pt-2">
-                      <div className="w-full py-1.5 rounded-full bg-[#8CC63F] text-[#17170F] font-bold text-[9px] flex items-center justify-center gap-1 shadow-xs">
-                        <Plus className="w-3 h-3 stroke-[3]" />
+                    <div className="px-3.5 pt-3">
+                      <div className="w-full py-2 rounded-full bg-[#8CC63F] text-[#17170F] font-bold text-[10px] flex items-center justify-center gap-1.5 shadow-xs">
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
                         <span>Add money</span>
                       </div>
                     </div>
+
+                    {/* Home bar */}
+                    <div className="w-20 h-1 bg-gray-300 rounded-full mx-auto mt-3" />
                   </div>
                 </motion.div>
 
                 {/* Front Phone (Left dashboard screen) */}
                 <motion.div
-                  initial={{ opacity: 0, y: 40 }}
+                  initial={{ opacity: 0, y: 35 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute left-0 sm:left-4 top-0 z-20 w-[255px] sm:w-[275px] rounded-[40px] bg-[#17170F] p-3 shadow-2xl border-2 border-[#17170F]"
+                  className="absolute left-0 sm:left-2 top-0 z-20 w-[265px] sm:w-[285px] rounded-[46px] bg-[#11130E] p-3 shadow-2xl border-2 border-[#11130E]"
                 >
-                  <div className="rounded-[30px] bg-[#FBF9F4] overflow-hidden text-[#17170F] select-none">
+                  <div className="rounded-[38px] bg-[#FAF9F5] overflow-hidden text-[#17170F] select-none shadow-inner">
                     {/* Status Bar */}
-                    <div className="px-5 pt-2.5 flex items-center justify-between text-[10px] font-semibold text-gray-600">
+                    <div className="px-5 pt-3 pb-1 flex items-center justify-between text-[10px] font-semibold text-gray-600">
                       <span>9:41</span>
-                      <div className="w-18 h-4 rounded-full bg-[#17170F] -mt-1" />
-                      <Bell className="w-3 h-3 text-gray-600" />
+                      <div className="w-20 h-4 rounded-full bg-[#11130E] -mt-1" />
+                      <Bell className="w-3.5 h-3.5 text-gray-600" />
                     </div>
 
-                    <div className="px-3.5 pt-2 pb-3 space-y-2.5">
+                    <div className="px-4 pt-2 pb-3 space-y-3">
                       {/* Greeting */}
-                      <p className="text-[10px] text-gray-500 font-medium">Good morning, Tolu 👋</p>
+                      <p className="text-[11px] text-gray-500 font-medium">Good morning, Tolu 👋</p>
 
                       {/* Total Saved Card */}
-                      <div className="rounded-xl bg-white p-2.5 border border-[#EBE8DE] shadow-2xs">
-                        <p className="text-[8px] text-gray-400 font-medium">Total saved across goals</p>
-                        <p className="font-display font-extrabold text-lg text-[#17170F] tracking-tight mt-0.5">
+                      <div className="rounded-2xl bg-white p-3 border border-[#EBE8DE] shadow-2xs">
+                        <p className="text-[9px] text-gray-400 font-medium">Total saved across goals</p>
+                        <p className="font-display font-extrabold text-xl text-[#17170F] tracking-tight mt-0.5">
                           ₦345,600
                         </p>
-                        <p className="text-[8px] font-bold text-[#8CC63F] mt-0.5">Across 3 goals</p>
+                        <p className="text-[9px] font-bold text-[#8CC63F] mt-0.5">Across 3 goals</p>
                       </div>
 
                       {/* Your Goals Header */}
                       <div className="flex items-center justify-between pt-0.5">
-                        <span className="text-[10px] font-bold text-[#17170F]">Your goals</span>
-                        <span className="text-[8px] font-bold text-[#8CC63F] cursor-pointer">View all</span>
+                        <span className="text-[11px] font-bold text-[#17170F]">Your goals</span>
+                        <span className="text-[9px] font-bold text-[#8CC63F] cursor-pointer">View all</span>
                       </div>
 
                       {/* Goal Card 1: MacBook Air */}
-                      <div className="rounded-xl bg-white p-2.5 border border-[#EBE8DE] shadow-2xs space-y-2">
+                      <div className="rounded-2xl bg-white p-3 border border-[#EBE8DE] shadow-2xs space-y-2">
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-bold text-[10px] text-[#17170F]">MacBook Air</p>
-                            <p className="font-extrabold text-[9px] text-[#17170F] mt-1">
+                            <p className="font-bold text-[11px] text-[#17170F]">MacBook Air</p>
+                            <p className="font-extrabold text-[10px] text-[#17170F] mt-1">
                               ₦345,600 <span className="text-gray-400 font-normal">/ ₦480,000</span>
                             </p>
                           </div>
-                          {/* Laptop thumbnail */}
-                          <div className="w-10 h-7 bg-gray-50 rounded flex items-center justify-center text-xs">
-                            💻
+                          {/* Realistic Laptop graphic */}
+                          <div className="w-12 h-8 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100 shadow-2xs">
+                            <svg viewBox="0 0 48 32" className="w-full h-full" fill="none">
+                              <rect x="6" y="2" width="36" height="23" rx="2.5" fill="#1C1E21" stroke="#A6ACB5" strokeWidth="1.5" />
+                              <rect x="8" y="4" width="32" height="19" rx="1" fill="#4B77BE" />
+                              <path d="M 12 18 Q 24 10, 36 15" stroke="#E26A6A" strokeWidth="3" fill="none" />
+                              <path d="M 2 26 L 46 26 L 43 28 L 5 28 Z" fill="#D3D7DC" stroke="#A6ACB5" strokeWidth="1" />
+                            </svg>
                           </div>
                         </div>
 
@@ -358,34 +402,41 @@ export default function LandingPage() {
                           <div className="h-1.5 flex-1 rounded-full bg-gray-100 overflow-hidden">
                             <div className="h-full bg-[#8CC63F] rounded-full w-[72%]" />
                           </div>
-                          <span className="text-[8px] font-bold text-gray-500">72%</span>
+                          <span className="text-[9px] font-bold text-gray-500">72%</span>
                         </div>
 
                         {/* Sub stats */}
-                        <div className="flex items-center justify-between text-[7px] text-gray-500 pt-0.5 border-t border-gray-50">
+                        <div className="flex items-center justify-between text-[8px] text-gray-500 pt-1 border-t border-gray-50">
                           <div>
                             <span className="font-bold text-gray-800">₦7,077</span> / day
-                            <p className="text-[6px] text-gray-400">Daily target</p>
+                            <p className="text-[7px] text-gray-400">Daily target</p>
                           </div>
                           <div className="text-right">
                             <span className="font-bold text-gray-800">19 days left</span>
-                            <p className="text-[6px] text-gray-400">Due 12 Jun, 2026</p>
+                            <p className="text-[7px] text-gray-400">Due 12 Jun, 2026</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Goal Card 2: Department Projector */}
-                      <div className="rounded-xl bg-white p-2.5 border border-[#EBE8DE] shadow-2xs space-y-1.5">
+                      <div className="rounded-2xl bg-white p-3 border border-[#EBE8DE] shadow-2xs space-y-2">
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-bold text-[10px] text-[#17170F]">Department Projector</p>
-                            <p className="font-extrabold text-[9px] text-[#17170F] mt-1">
+                            <p className="font-bold text-[11px] text-[#17170F]">Department Projector</p>
+                            <p className="font-extrabold text-[10px] text-[#17170F] mt-1">
                               ₦180,000 <span className="text-gray-400 font-normal">/ ₦300,000</span>
                             </p>
                           </div>
-                          {/* Projector thumbnail */}
-                          <div className="w-10 h-7 bg-gray-50 rounded flex items-center justify-center text-xs">
-                            🎥
+                          {/* Realistic Projector graphic */}
+                          <div className="w-12 h-8 rounded-lg bg-gray-50 flex items-center justify-center p-1 border border-gray-100 shadow-2xs">
+                            <svg viewBox="0 0 48 28" className="w-full h-full" fill="none">
+                              <rect x="4" y="6" width="40" height="18" rx="3" fill="#EAECEE" stroke="#BDC3C7" strokeWidth="1.2" />
+                              <circle cx="34" cy="15" r="5.5" fill="#2C3E50" stroke="#7F8C8D" strokeWidth="1.5" />
+                              <circle cx="34" cy="15" r="2.5" fill="#3498DB" />
+                              <rect x="8" y="10" width="16" height="2" rx="1" fill="#BDC3C7" />
+                              <rect x="8" y="14" width="16" height="2" rx="1" fill="#BDC3C7" />
+                              <rect x="8" y="18" width="10" height="2" rx="1" fill="#BDC3C7" />
+                            </svg>
                           </div>
                         </div>
 
@@ -394,17 +445,17 @@ export default function LandingPage() {
                           <div className="h-1.5 flex-1 rounded-full bg-gray-100 overflow-hidden">
                             <div className="h-full bg-[#F3C449] rounded-full w-[60%]" />
                           </div>
-                          <span className="text-[8px] font-bold text-gray-500">60%</span>
+                          <span className="text-[9px] font-bold text-gray-500">60%</span>
                         </div>
 
                         {/* Avatar stack */}
-                        <div className="flex items-center gap-1 pt-0.5">
-                          <span className="text-[7px] text-gray-400">8 contributors</span>
-                          <div className="flex -space-x-1 ml-auto">
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <span className="text-[8px] text-gray-400">8 contributors</span>
+                          <div className="flex -space-x-1.5 ml-auto">
                             {AVATAR_PHOTOS.slice(0, 3).map((src, idx) => (
-                              <img key={idx} src={src} alt="user" className="w-3.5 h-3.5 rounded-full border border-white object-cover" />
+                              <img key={idx} src={src} alt="user" className="w-4 h-4 rounded-full border border-white object-cover shadow-2xs" />
                             ))}
-                            <span className="w-3.5 h-3.5 rounded-full bg-gray-200 text-[6px] flex items-center justify-center font-bold">
+                            <span className="w-4 h-4 rounded-full bg-gray-200 text-[7px] flex items-center justify-center font-bold">
                               +3
                             </span>
                           </div>
@@ -413,28 +464,31 @@ export default function LandingPage() {
                     </div>
 
                     {/* Bottom Navigation */}
-                    <div className="bg-white border-t border-[#EBE8DE] px-4 py-2 flex items-center justify-between text-gray-400 text-[9px]">
+                    <div className="bg-white border-t border-[#EBE8DE] px-4 py-2 flex items-center justify-between text-gray-400 text-[10px]">
                       <div className="flex flex-col items-center text-[#8CC63F]">
-                        <span>🏠</span>
-                        <span className="text-[7px] font-semibold">Home</span>
+                        <span className="text-xs">🏠</span>
+                        <span className="text-[8px] font-bold">Home</span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span>🎯</span>
-                        <span className="text-[7px]">Goals</span>
+                        <span className="text-xs">🎯</span>
+                        <span className="text-[8px]">Goals</span>
                       </div>
                       {/* Floating Add Button */}
-                      <div className="w-7 h-7 rounded-full bg-[#8CC63F] text-[#17170F] flex items-center justify-center font-bold text-xs -mt-3 shadow-md">
+                      <div className="w-8 h-8 rounded-full bg-[#8CC63F] text-[#17170F] flex items-center justify-center font-bold text-sm -mt-4 shadow-md border-2 border-white">
                         +
                       </div>
                       <div className="flex flex-col items-center">
-                        <span>👥</span>
-                        <span className="text-[7px]">People</span>
+                        <span className="text-xs">👥</span>
+                        <span className="text-[8px]">People</span>
                       </div>
                       <div className="flex flex-col items-center">
-                        <span>👤</span>
-                        <span className="text-[7px]">Profile</span>
+                        <span className="text-xs">👤</span>
+                        <span className="text-[8px]">Profile</span>
                       </div>
                     </div>
+
+                    {/* Home bar */}
+                    <div className="w-20 h-1 bg-gray-300 rounded-full mx-auto my-1.5" />
                   </div>
                 </motion.div>
               </div>
@@ -443,36 +497,36 @@ export default function LandingPage() {
         </section>
 
         {/* ── TRUST & FEATURE BADGES BAR ───────────────── */}
-        <section id="features" className="mx-auto max-w-7xl px-6 md:px-12">
+        <section id="features" className="mx-auto max-w-7xl px-6 md:px-12 -mt-6 sm:-mt-10 mb-4 sm:mb-8">
           <FadeUp>
-            <div className="rounded-2xl border border-[#E9E8E0] bg-white grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E9E8E0] shadow-sm">
+            <div className="rounded-[28px] border border-[#E7E5DC] bg-[#FAF8F3] grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E7E5DC] shadow-2xs">
               {[
                 {
-                  icon: <Shield className="h-6 w-6 stroke-[1.8] text-[#17170F]" />,
+                  icon: <ShieldCheck className="h-8 w-8 stroke-[1.3] text-[#17170F]" />,
                   title: "Secure & regulated",
                   body: "Powered by BMONI\nNigeria's licensed rail.",
                 },
                 {
-                  icon: <Users className="h-6 w-6 stroke-[1.8] text-[#17170F]" />,
+                  icon: <Users className="h-8 w-8 stroke-[1.3] text-[#17170F]" />,
                   title: "No account needed",
                   body: "Anyone can contribute\nwith a bank transfer.",
                 },
                 {
-                  icon: <Lock className="h-6 w-6 stroke-[1.8] text-[#17170F]" />,
+                  icon: <Lock className="h-8 w-8 stroke-[1.3] text-[#17170F]" />,
                   title: "Fair when plans change",
                   body: "Emergency refunds are\nsafe and proportional.",
                 },
                 {
-                  icon: <Zap className="h-6 w-6 stroke-[1.8] text-[#17170F]" />,
+                  icon: <Zap className="h-8 w-8 stroke-[1.3] text-[#17170F]" />,
                   title: "Built for students",
                   body: "Simple, transparent,\nand affordable.",
                 },
               ].map(({ icon, title, body }) => (
-                <div key={title} className="flex items-start gap-4 px-6 py-6 lg:py-7">
-                  <div className="shrink-0 p-1 text-[#17170F]">{icon}</div>
+                <div key={title} className="flex items-center gap-4 px-6 py-5 lg:py-6">
+                  <div className="shrink-0 text-[#17170F]">{icon}</div>
                   <div>
-                    <p className="text-sm font-bold text-[#17170F]">{title}</p>
-                    <p className="text-xs text-[#595B52] mt-1 whitespace-pre-line leading-relaxed font-normal">
+                    <p className="text-sm font-bold text-[#17170F] leading-tight">{title}</p>
+                    <p className="text-xs text-[#595B52] mt-0.5 whitespace-pre-line leading-snug font-normal">
                       {body}
                     </p>
                   </div>

@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
   CreditCard, TrendingUp, Users, Landmark, Bell, Plus, ArrowRight,
-  ArrowUpRight, Flame,
+  ArrowUpRight, Flame, Loader2,
 } from "lucide-react";
 import { ProgressBar } from "@/app/components/ProgressBar";
 import { Avatar } from "@/app/components/Avatar";
@@ -16,6 +18,7 @@ import {
 import { formatNaira, pct, daysLeft, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Goal } from "@/lib/types";
+import { useAuth } from "@/app/context/AuthContext";
 
 function getGoalTag(goal: Goal) {
   const pending = activeWithdrawal(goal.id);
@@ -25,7 +28,16 @@ function getGoalTag(goal: Goal) {
 }
 
 export default function DashboardPage() {
-  const userId = "u_tolu";
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login?redirect=/dashboard");
+    }
+  }, [user, authLoading, router]);
+
+  const userId = user?.id || "u_tolu";
   const goals = listGoalsForUser(userId);
   const summary = dashboardSummary(userId);
   const activity = recentActivity(userId, 5);
@@ -38,6 +50,17 @@ export default function DashboardPage() {
     { icon: <Landmark className="h-5 w-5 text-faint" />, bg: "bg-surface-2", label: "Payouts received", value: formatNaira(summary.payoutsReceived), sub: "Offramped to bank" },
   ];
 
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin mx-auto" />
+          <p className="text-sm font-medium text-muted">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-cream font-sans">
       <DashboardSidebar />
@@ -47,7 +70,7 @@ export default function DashboardPage() {
         {/* Top bar */}
         <header className="sticky top-0 z-20 bg-cream/90 backdrop-blur-md border-b border-line px-6 py-3 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm text-muted">Good afternoon, Tolu 👋</p>
+            <p className="text-sm text-muted">Welcome back, {user.name} 👋</p>
             <h1 className="font-display text-2xl font-bold text-ink leading-tight">
               Here&apos;s your progress
               <motion.span
@@ -79,6 +102,22 @@ export default function DashboardPage() {
         </header>
 
         <main className="p-6 space-y-6">
+          {/* KYC Alert if not verified */}
+          {!user.isKycVerified && (
+            <div className="rounded-2xl border-2 border-brand-300 bg-brand-50/80 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-ink">Action Required: Complete Tier-1 KYC</p>
+                <p className="text-[11px] text-muted">Link your BVN/NIN and payout bank account to enable goal creation and automated settlements.</p>
+              </div>
+              <Link
+                href="/onboarding"
+                className="rounded-full bg-ink text-cream px-4 py-2 text-xs font-semibold hover:bg-ink-hover shrink-0 transition-colors"
+              >
+                Complete Verification 🚀
+              </Link>
+            </div>
+          )}
+
           {/* Stats grid */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -264,7 +303,6 @@ function GoalCard({ goal }: { goal: Goal }) {
   const days = daysLeft(goal.deadline);
   const { label: tagLabel, color: tagColor } = getGoalTag(goal);
   const pending = activeWithdrawal(goal.id);
-  const users = usersMap();
 
   return (
     <Link

@@ -15,6 +15,7 @@ import {
   Search,
   Loader2,
   Info,
+  ShieldAlert,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { installmentBreakdown } from "@/lib/calculator";
@@ -22,12 +23,26 @@ import { formatNaira, daysLeft } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Frequency, GoalType } from "@/lib/types";
 import type { RetailerOption } from "@/lib/catalog";
+import { useAuth } from "@/app/context/AuthContext";
 
 const EMOJIS = ["🎯", "📱", "💻", "🎥", "🍽️", "✈️", "🏠", "📚", "💊", "🎓", "🚗", "⚽", "⚡", "📷"];
 
 export default function NewGoalPage() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+
   const [step, setStep] = useState<1 | 2>(1);
+
+  // Auth & KYC guard
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push("/login?redirect=/goals/new");
+      } else if (!user.isKycVerified) {
+        router.push("/onboarding?redirect=/goals/new");
+      }
+    }
+  }, [user, authLoading, router]);
 
   // Form state (Manual by default)
   const [emoji, setEmoji] = useState("🎯");
@@ -111,12 +126,16 @@ export default function NewGoalPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          userId: user.id,
+          ownerName: user.name,
           title,
           type: goalType,
           targetAmount: amountNum,
@@ -134,6 +153,17 @@ export default function NewGoalPage() {
     } catch {
       router.push("/dashboard");
     }
+  }
+
+  if (authLoading || !user || !user.isKycVerified) {
+    return (
+      <div className="min-h-screen bg-[#FBF9F4] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin mx-auto" />
+          <p className="text-sm font-medium text-muted">Checking KYC &amp; Payout verification...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -605,4 +635,3 @@ function Step2({
     </div>
   );
 }
-
