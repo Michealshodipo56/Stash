@@ -188,7 +188,7 @@ export default function PublicFundGoalPage({
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 border border-brand-200 mb-2">
                 <Sparkles className="w-3 h-3 text-brand-600" />
-                {goal.type === "group" ? "Group Goal" : "Individual Goal"}
+                Individual Goal
               </span>
               <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink">
                 Fund &ldquo;{goal.title}&rdquo;
