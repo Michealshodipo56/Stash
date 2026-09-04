@@ -22,6 +22,7 @@ export interface UserProfile {
   bmoniError?: string;
   smartWalletId?: string;
   walletAddress?: string;
+  avatarColor?: string;
 }
 
 export interface SignupInput {

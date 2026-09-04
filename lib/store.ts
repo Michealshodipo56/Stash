@@ -584,12 +584,100 @@ export async function removeMemberAndAdjust(
   };
 }
 
+export function addMemberToGoal(input: {
+  goalId: string;
+  name: string;
+  emailOrPhone?: string;
+}): { member: GoalMember; user: User } {
+  const goal = getGoal(input.goalId);
+  if (!goal) throw new Error("Goal not found");
+
+  // Find or create user
+  let user = db().users.find(
+    (u) =>
+      u.name.toLowerCase() === input.name.toLowerCase() ||
+      (input.emailOrPhone && (u.email === input.emailOrPhone || u.phone === input.emailOrPhone))
+  );
+
+  if (!user) {
+    user = {
+      id: genId("u"),
+      name: input.name,
+      phone: input.emailOrPhone?.startsWith("0") || input.emailOrPhone?.startsWith("+") ? input.emailOrPhone : "080" + Math.floor(10000000 + Math.random() * 90000000),
+      email: input.emailOrPhone?.includes("@") ? input.emailOrPhone : `${input.name.toLowerCase().replace(/\s+/g, "")}@example.com`,
+      kycStatus: "active",
+      bankAccountNumber: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
+      bankName: "GTBank",
+      avatarColor: "#8cc63f",
+      createdAt: new Date().toISOString(),
+    };
+    db().users.push(user);
+  }
+
+  // Check if already a member
+  const existingMember = db().members.find((m) => m.goalId === input.goalId && m.userId === user!.id);
+  if (existingMember) {
+    return { member: existingMember, user };
+  }
+
+  const newMember: GoalMember = {
+    id: genId("gm"),
+    goalId: input.goalId,
+    userId: user.id,
+    role: "member",
+    joinedAt: new Date().toISOString(),
+  };
+
+  db().members.push(newMember);
+
+  // Convert goal to group type if it was individual
+  if (goal.type === "individual") {
+    goal.type = "group";
+    const ownerMember = db().members.find((m) => m.goalId === input.goalId && m.userId === goal.ownerId);
+    if (!ownerMember) {
+      db().members.push({
+        id: genId("gm"),
+        goalId: input.goalId,
+        userId: goal.ownerId,
+        role: "admin",
+        joinedAt: goal.createdAt,
+      });
+    }
+  }
+
+  // Recalculate per-member installment
+  const currentSaved = goalSaved(input.goalId);
+  const allMembers = goalMembers(input.goalId);
+  const memberCount = Math.max(1, allMembers.length);
+
+  const newTotalInstallment = installmentFor({
+    target: goal.targetAmount,
+    deadline: goal.deadline,
+    frequency: goal.frequency,
+    saved: currentSaved,
+  });
+
+  goal.installmentAmount = Math.ceil(newTotalInstallment / memberCount);
+  saveToDisk(db());
+
+  return { member: newMember, user };
+}
+
 /** Admin manual close of a goal */
 export async function closeGoal(goalId: string): Promise<void> {
   const goal = getGoal(goalId);
   if (!goal) return;
   goal.status = "completed";
   saveToDisk(db());
+}
+
+/** Update goal details or status */
+export function updateGoal(goalId: string, updates: Partial<Goal>): Goal | null {
+  const goal = getGoal(goalId);
+  if (!goal) return null;
+  Object.assign(goal, updates);
+  saveToDisk(db());
+  return goal;
 }
 
 export function createWithdrawal(input: {

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 245 221" role="img" aria-label="Aidex">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="237" y2="213" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C4EC5A"/>
+      <stop offset=".45" stop-color="#8CC63F"/>
+      <stop offset="1" stop-color="#5A9524"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#g)" d="M94 0 L137 0 L148 5 L156 14 L185 78 L199 64 L186 55 L188 50 L231 35 L237 37 L226 90 L221 90 L214 82 L195 102 L228 181 L229 195 L224 205 L209 213 L191 213 L176 206 L145 140 L110 156 L84 162 L62 163 L60 169 L96 165 L103 165 L105 168 L76 201 L62 212 L24 213 L13 209 L4 200 L0 191 L0 177 L15 140 L70 19 L80 6 L93 1 Z"/>
+</svg>

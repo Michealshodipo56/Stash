@@ -1,0 +1,146 @@
+{
+  "users": [
+    {
+      "id": "u_mtmppohr_41e84b",
+      "name": "Kemi Adeyemi",
+      "phone": "+2348098511740",
+      "email": "kemi.1788511740@stash.demo",
+      "passwordHash": "332de4dc87fb0047c856ebb7779c095a:07f5cd02a087c9314a1271dfe397cf42948fa3ecd3e03978fadb377163b54095df7a4ae479ce813bcabbe56ecf272d9f02ef67a6cf8018377d2fa3525b574ea8",
+      "bmoniUserId": "cadefe64-a277-43c8-9233-5859734d63a4",
+      "kycStatus": "active",
+      "avatarColor": "#8cc63f",
+      "createdAt": "2026-09-04T08:49:03.199Z"
+    },
+    {
+      "id": "u_mtmppvbg_4ddbdb",
+      "name": "Kemi Adeyemi",
+      "phone": "+2348098511751",
+      "email": "kemi.1788511751@stash.demo",
+      "passwordHash": "bbdb50518258da05f1a35549803fd3fe:84687bab8bf1106740af47cbcbe4b242a375d20486029e526a8c556c92e5ea877e0ce93ec79c461e0f1ac0138b62cbee5fc611fafe2bbfce09e1a7377209a738",
+      "bmoniUserId": "3805ed47-3596-4ff7-9be6-b35c23807adf",
+      "kycStatus": "active",
+      "avatarColor": "#8cc63f",
+      "createdAt": "2026-09-04T08:49:17.147Z"
+    },
+    {
+      "id": "u_mtmq5hzy_c449b1",
+      "name": "Live Signup Test",
+      "phone": "+2348088512480",
+      "email": "live.test.1788512480@stash.local",
+      "passwordHash": "2ce050ad63e2e2e1f840b3b1de1c87e2:0497720d8e458e22957a2bfa348670e26226af469fa26cc2d8bd7d96ef8eb52c689c74b04e5288bcaec09e6fdecf3a1f392443c81f1ba9e986359e8581ea725d",
+      "bmoniUserId": "bd821e9d-a553-4e31-a308-15bb0c60f07b",
+      "kycStatus": "active",
+      "avatarColor": "#8cc63f",
+      "createdAt": "2026-09-04T09:01:22.033Z"
+    },
+    {
+      "id": "u_mtmqg365_ba62dd",
+      "name": "shodipo micheal",
+      "phone": "07086687479",
+      "email": "bjmicheal30@gmail.com",
+      "passwordHash": "909ebe91d3527f7c3736ab3440bb66ad:0ffb7df15450236a81ee61d88613e00bed9ca77c8b66cd9f19d4deca7d9f094b68d1cfbd4093a47a000ce27096a0934b34ea41bfa647a5bebd7ccd264f538839",
+      "bmoniError": "BMONI Sandbox Error (400): Validation failed",
+      "kycStatus": "active",
+      "bankAccountNumber": "7086687479",
+      "bankName": "OPay Digital Services (PayCom)",
+      "avatarColor": "#8cc63f",
+      "createdAt": "2026-09-04T09:09:40.646Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess_mtmppp7o_8ddec775",
+      "token": "ca1fa48d30198093c59bd86fae0ef31947bb067c838f5dc5a73898fc3da1f456",
+      "userId": "u_mtmppohr_41e84b",
+      "createdAt": "2026-09-04T08:49:03.205Z",
+      "expiresAt": "2026-09-11T08:49:03.204Z"
+    },
+    {
+      "id": "sess_mtmppzz2_9ce3d46f",
+      "token": "219c964ff32a609b3b78f76825a37a24b1a8284909b092f20cf6987f9cfa171d",
+      "userId": "u_mtmppvbg_4ddbdb",
+      "createdAt": "2026-09-04T08:49:17.150Z",
+      "expiresAt": "2026-09-11T08:49:17.150Z"
+    },
+    {
+      "id": "sess_mtmq5jas_3f22f368",
+      "token": "c4bd670ec3e63c752ecbfcac82e38f7b25f264d4559a6155f62ed3ca81ebc167",
+      "userId": "u_mtmq5hzy_c449b1",
+      "createdAt": "2026-09-04T09:01:22.037Z",
+      "expiresAt": "2026-09-11T09:01:22.036Z"
+    },
+    {
+      "id": "sess_mtmsa7qh_47711477",
+      "token": "5da62e74c426111aed3203cba04f9733bba3615a2a66c2bc8c0f3ff75ebfd3e0",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T10:00:59.561Z",
+      "expiresAt": "2026-09-11T10:00:59.561Z"
+    }
+  ],
+  "goals": [
+    {
+      "id": "g_rttnn",
+      "title": "Wanbo T2 Max Full HD Portable Smart Projector",
+      "type": "individual",
+      "targetAmount": 210000,
+      "deadline": "2026-12-04",
+      "frequency": "daily",
+      "installmentAmount": 2308,
+      "ownerId": "u_mtmqg365_ba62dd",
+      "virtualAccountNumber": "9910004677",
+      "virtualAccountBank": "Providus Bank",
+      "status": "active",
+      "emoji": "🎥",
+      "createdAt": "2026-09-04T09:47:28.163Z"
+    },
+    {
+      "id": "g_rto51",
+      "title": "Samsung Galaxy S23 Ultra (256GB)",
+      "type": "group",
+      "targetAmount": 1250000,
+      "deadline": "2026-11-30",
+      "frequency": "weekly",
+      "installmentAmount": 96154,
+      "ownerId": "u_mtmqg365_ba62dd",
+      "virtualAccountNumber": "9910003233",
+      "virtualAccountBank": "Providus Bank",
+      "status": "completed",
+      "emoji": "📱",
+      "createdAt": "2026-09-04T10:08:20.725Z"
+    }
+  ],
+  "members": [
+    {
+      "id": "gm_ruo51",
+      "goalId": "g_rto51",
+      "userId": "u_mtmqg365_ba62dd",
+      "role": "admin",
+      "joinedAt": "2026-09-04T10:08:20.725Z"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "c_rtpzk",
+      "goalId": "g_rttnn",
+      "contributorName": "Member",
+      "amount": 15000,
+      "bmoniReference": "TRX_mtmtjpzk_ru",
+      "receivedAt": "2026-09-04T10:36:22.737Z"
+    }
+  ],
+  "withdrawalRequests": [],
+  "withdrawalVotes": [],
+  "payouts": [],
+  "streak": {
+    "days": 0,
+    "week": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  }
+}

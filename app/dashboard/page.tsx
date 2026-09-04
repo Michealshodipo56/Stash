@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { ProgressBar } from "@/app/components/ProgressBar";
 import { Avatar } from "@/app/components/Avatar";
-import { DashboardSidebar } from "@/app/components/DashboardSidebar";
+import { AppShell, MobileNavButton } from "@/app/components/DashboardSidebar";
 import {
   listGoalsForUser, dashboardSummary, goalSaved,
   activeWithdrawal, recentActivity, getStreak, usersMap,
@@ -45,6 +45,7 @@ export default function DashboardPage() {
     activity: any[];
     streak: { days: number; week: boolean[] };
   } | null>(null);
+  const [contributionNoticeCount, setContributionNoticeCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -56,10 +57,17 @@ export default function DashboardPage() {
 
     async function loadData() {
       try {
-        const res = await fetch(`/api/goals?userId=${encodeURIComponent(user!.id)}`);
-        const json = await res.json();
+        const [goalsRes, contribRes] = await Promise.all([
+          fetch(`/api/goals?userId=${encodeURIComponent(user!.id)}`),
+          fetch(`/api/contributions?userId=${encodeURIComponent(user!.id)}`),
+        ]);
+        const json = await goalsRes.json();
         if (json.success) {
           setDashboardData(json);
+        }
+        const contribJson = await contribRes.json();
+        if (contribJson.success) {
+          setContributionNoticeCount((contribJson.contributions || []).length);
         }
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
@@ -103,34 +111,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-cream font-sans">
-      <DashboardSidebar />
-
+    <AppShell>
       {/* ── Main content ─────────────────────────────────── */}
       <div className="flex-1 min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 bg-cream/90 backdrop-blur-md border-b border-line px-6 py-3 flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm text-muted">Welcome back, {user.name} 👋</p>
-            <h1 className="font-display text-2xl font-bold text-ink leading-tight">
-              Here&apos;s your progress
-              <motion.span
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                style={{ transformOrigin: "left" }}
-                className="block h-0.5 bg-brand-400 mt-1 rounded-full w-32"
-              />
-            </h1>
+        <header className="sticky top-0 z-20 bg-cream/90 backdrop-blur-md border-b border-line px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <MobileNavButton className="mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-sm text-muted">Welcome back, {user.name} 👋</p>
+              <h1 className="font-display text-2xl font-bold text-ink leading-tight">
+                Here&apos;s your progress
+                <motion.span
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  style={{ transformOrigin: "left" }}
+                  className="block h-0.5 bg-brand-400 mt-1 rounded-full w-32"
+                />
+              </h1>
+            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button
+            <Link
+              href="/contributions"
               id="notification-btn"
+              aria-label={
+                contributionNoticeCount > 0
+                  ? `${contributionNoticeCount} contribution notifications`
+                  : "View contributions"
+              }
               className="relative rounded-full border border-line bg-surface p-2.5 hover:bg-surface-2 transition-colors"
             >
               <Bell className="h-4 w-4 text-muted" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-coral-400 text-white text-[9px] font-bold flex items-center justify-center">3</span>
-            </button>
+              {contributionNoticeCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-coral-400 text-white text-[9px] font-bold flex items-center justify-center">
+                  {contributionNoticeCount > 9 ? "9+" : contributionNoticeCount}
+                </span>
+              )}
+            </Link>
             <Link
               href="/goals/new"
               id="dashboard-new-goal-btn"
@@ -363,7 +382,7 @@ export default function DashboardPage() {
           </motion.div>
         </main>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

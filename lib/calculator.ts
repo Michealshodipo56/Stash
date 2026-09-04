@@ -28,6 +28,8 @@ export function periodsUntil(
       return Math.max(1, Math.ceil(days / 7));
     case "monthly":
       return Math.max(1, Math.ceil(days / DAYS_PER_MONTH));
+    case "yearly":
+      return Math.max(1, Math.ceil(days / 365.25));
   }
 }
 
@@ -50,7 +52,7 @@ export function installmentFor(params: {
   return Math.ceil(remaining / periods);
 }
 
-/** All three installment options at once — powers the live calculator toggle. */
+/** All installment options at once — powers the live calculator toggle. */
 export function installmentBreakdown(params: {
   target: number;
   deadline: Date | string;
@@ -61,6 +63,7 @@ export function installmentBreakdown(params: {
     daily: installmentFor({ ...params, frequency: "daily" }),
     weekly: installmentFor({ ...params, frequency: "weekly" }),
     monthly: installmentFor({ ...params, frequency: "monthly" }),
+    yearly: installmentFor({ ...params, frequency: "yearly" }),
   };
 }
 
@@ -68,10 +71,12 @@ export const FREQUENCY_LABEL: Record<Frequency, string> = {
   daily: "day",
   weekly: "week",
   monthly: "month",
+  yearly: "year",
 };
 
 export const FREQUENCY_ADVERB: Record<Frequency, string> = {
   daily: "daily",
   weekly: "weekly",
   monthly: "monthly",
+  yearly: "yearly",
 };

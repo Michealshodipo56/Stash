@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion, useInView } from "motion/react";
 import {
   ArrowRight,
@@ -19,8 +19,18 @@ import {
   Plus,
   ChevronLeft,
   Share2,
+  Menu,
+  X,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
+
+const LANDING_NAV = [
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#features", label: "Features" },
+  { href: "#groups", label: "For groups" },
+  { href: "#security", label: "Security" },
+  { href: "#faqs", label: "FAQs" },
+];
 
 /* ─── Avatar photos & helper ─────────────────────────────── */
 const AVATAR_PHOTOS = [
@@ -55,6 +65,8 @@ function FadeUp({
 }
 
 export default function LandingPage() {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   return (
     <div className="min-h-screen text-[#17170F] font-sans selection:bg-[#d0e8a4] selection:text-[#17170F] overflow-x-hidden">
       {/* ── TOP SECTION WRAPPER (#FAF9F5) ──────────────── */}
@@ -67,29 +79,57 @@ export default function LandingPage() {
             </Link>
 
             <nav className="hidden md:flex items-center gap-8 text-[13px] font-medium text-[#4A4C42]">
-              <a href="#how-it-works" className="hover:text-[#17170F] transition-colors">How it works</a>
-              <a href="#features" className="hover:text-[#17170F] transition-colors">Features</a>
-              <a href="#groups" className="hover:text-[#17170F] transition-colors">For groups</a>
-              <a href="#security" className="hover:text-[#17170F] transition-colors">Security</a>
-              <a href="#faqs" className="hover:text-[#17170F] transition-colors">FAQs</a>
+              {LANDING_NAV.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="hover:text-[#17170F] transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
             </nav>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link
                 href="/login"
-                className="text-xs md:text-sm font-semibold text-[#17170F] hover:text-black px-3 py-1.5 transition-colors"
+                className="text-xs md:text-sm font-semibold text-[#17170F] hover:text-black px-2 sm:px-3 py-1.5 transition-colors"
               >
                 Log in
               </Link>
               <Link
                 href="/goals/new"
                 id="nav-start-btn"
-                className="rounded-full bg-[#17170F] text-[#8CC63F] px-5 py-2 text-xs md:text-sm font-semibold hover:bg-black transition-all shrink-0 shadow-sm"
+                className="rounded-full bg-[#17170F] text-[#8CC63F] px-3 sm:px-5 py-2 text-xs md:text-sm font-semibold hover:bg-black transition-all shrink-0 shadow-sm"
               >
                 Start a goal
               </Link>
+              <button
+                type="button"
+                className="md:hidden rounded-xl border border-[#ECEAE0] bg-white p-2.5 text-[#17170F] hover:bg-[#F0EFEA] transition-colors"
+                aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={mobileNavOpen}
+                onClick={() => setMobileNavOpen((v) => !v)}
+              >
+                {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
             </div>
           </div>
+
+          {mobileNavOpen && (
+            <div className="md:hidden border-t border-[#ECEAE0] bg-[#FAF9F5] px-6 py-4 space-y-1">
+              {LANDING_NAV.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileNavOpen(false)}
+                  className="block rounded-xl px-3 py-2.5 text-sm font-medium text-[#4A4C42] hover:bg-white hover:text-[#17170F] transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          )}
         </header>
 
         <main className="space-y-10 md:space-y-12">
@@ -209,8 +249,11 @@ export default function LandingPage() {
               {/* Right Column — Dual Phone Mockups & Organic Green Backdrop */}
               <div className="lg:col-span-6 relative flex items-center justify-center pt-2 lg:pt-0">
                 {/* Organic Hand-Drawn Lime Green Backdrop Shape */}
-                <div
+                <motion.div
                   aria-hidden="true"
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
                   className="pointer-events-none absolute w-[490px] sm:w-[580px] h-[540px] sm:h-[620px] -top-8 -right-4 sm:right-0 z-0 flex items-center justify-center select-none"
                 >
                   <svg
@@ -239,7 +282,7 @@ export default function LandingPage() {
                       strokeLinecap="round"
                     />
                   </svg>
-                </div>
+                </motion.div>
 
                 {/* Phones Container */}
                 <div className="relative w-full max-w-[500px] h-[600px] sm:h-[640px] flex items-center justify-center z-10">

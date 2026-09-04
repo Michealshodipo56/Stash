@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { DashboardSidebar } from "@/app/components/DashboardSidebar";
+import { AppShell, MobileNavButton } from "@/app/components/DashboardSidebar";
 import { Avatar } from "@/app/components/Avatar";
 import { useAuth } from "@/app/context/AuthContext";
 import { User, Wallet, Landmark, ShieldCheck, Check, Save, ArrowRight } from "lucide-react";
@@ -58,13 +58,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-cream font-sans">
-      <DashboardSidebar />
-
+    <AppShell>
       <main className="flex-1 p-6 max-w-4xl space-y-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-ink">Settings &amp; Account</h1>
-          <p className="text-sm text-muted">Manage your profile, payout bank account, and BMONI Smart Wallet.</p>
+        <div className="flex items-start gap-3">
+          <MobileNavButton className="mt-0.5" />
+          <div>
+            <h1 className="font-display text-2xl font-bold text-ink">Settings &amp; Account</h1>
+            <p className="text-sm text-muted">Manage your profile, payout bank account, and BMONI Smart Wallet.</p>
+          </div>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
@@ -239,6 +240,6 @@ export default function SettingsPage() {
           </div>
         </form>
       </main>
-    </div>
+    </AppShell>
   );
 }

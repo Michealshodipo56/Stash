@@ -64,12 +64,34 @@ export async function signRawTransferDigest(
  * Calls BMONI Embedded API sandbox: POST /v1/users
  * Onboarding step 1: registers the user in BMONI and retrieves their bmoniUserId.
  * If this call fails (e.g. 401 Unauthorized / missing or invalid key), surfaces the real error.
+ *
+ * Sandbox schema (confirmed live): firstName, lastName?, email, phoneNumber
+ * Auth header: x-api-key (not Authorization).
  */
 export async function createBmoniUser(input: {
   name: string;
   email?: string;
   phone?: string;
 }): Promise<BmoniUserResponse> {
+  if (!BMONI_API_KEY) {
+    const error = new Error(
+      "BMONI Sandbox Error (401): Missing partner API key — set BMONI_API_KEY in .env.local",
+    );
+    (error as any).statusCode = 401;
+    throw error;
+  }
+
+  const parts = input.name.trim().split(/\s+/);
+  const firstName = parts[0] || input.name;
+  const lastName = parts.slice(1).join(" ") || firstName;
+  // BMONI requires phoneNumber; synthesize a unique sandbox MSISDN if signup omitted it
+  const phoneNumber =
+    input.phone?.trim() ||
+    `+23480${String(Date.now()).slice(-8)}`;
+  const email =
+    input.email ||
+    `${firstName.toLowerCase().replace(/[^a-z0-9]/g, "")}.${Date.now()}@stash.local`;
+
   const url = `${BMONI_BASE_URL}/v1/users`;
   const res = await fetch(url, {
     method: "POST",
@@ -78,9 +100,10 @@ export async function createBmoniUser(input: {
       "x-api-key": BMONI_API_KEY,
     },
     body: JSON.stringify({
-      name: input.name,
-      email: input.email,
-      phone: input.phone,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
     }),
   });
 
@@ -94,7 +117,9 @@ export async function createBmoniUser(input: {
 
   if (!res.ok) {
     const message =
-      parsed?.message ||
+      (Array.isArray(parsed?.message)
+        ? parsed.message.join("; ")
+        : parsed?.message) ||
       parsed?.error ||
       (parsed ? JSON.stringify(parsed) : responseText) ||
       res.statusText;
@@ -105,17 +130,19 @@ export async function createBmoniUser(input: {
     throw error;
   }
 
+  const user = parsed?.user ?? parsed?.data ?? parsed;
   const bmoniUserId =
+    user?.bmoniUserId ||
+    user?.id ||
+    parsed?.bmoniUserId ||
     parsed?.id ||
     parsed?.userId ||
-    parsed?.data?.id ||
-    parsed?.data?.userId ||
     "";
 
   return {
     bmoniUserId,
-    smartWalletId: parsed?.smartWalletId || parsed?.data?.smartWalletId,
-    walletAddress: parsed?.walletAddress || parsed?.data?.walletAddress,
+    smartWalletId: user?.smartWalletId || parsed?.smartWalletId,
+    walletAddress: user?.walletAddress || parsed?.walletAddress,
     raw: parsed,
   };
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getGoal,
+  updateGoal,
+  closeGoal,
   goalContributions,
   goalMembers,
   getUser,
@@ -9,6 +11,7 @@ import {
   quorumFor,
   refundBreakdown,
 } from "@/lib/store";
+import { installmentFor } from "@/lib/calculator";
 
 export async function GET(
   request: NextRequest,
@@ -56,6 +59,88 @@ export async function GET(
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || "Failed to fetch goal" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const goal = getGoal(id);
+
+    if (!goal) {
+      return NextResponse.json(
+        { success: false, error: "Goal not found" },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const updates: any = {};
+
+    if (body.title !== undefined) updates.title = String(body.title).trim();
+    if (body.targetAmount !== undefined) updates.targetAmount = Number(body.targetAmount);
+    if (body.deadline !== undefined) updates.deadline = String(body.deadline);
+    if (body.frequency !== undefined) updates.frequency = body.frequency;
+    if (body.status !== undefined) updates.status = body.status;
+    if (body.emoji !== undefined) updates.emoji = body.emoji;
+
+    // Recalculate installment amount if targetAmount, deadline or frequency updated
+    const finalTarget = updates.targetAmount !== undefined ? updates.targetAmount : goal.targetAmount;
+    const finalDeadline = updates.deadline !== undefined ? updates.deadline : goal.deadline;
+    const finalFrequency = updates.frequency !== undefined ? updates.frequency : goal.frequency;
+
+    if (updates.targetAmount !== undefined || updates.deadline !== undefined || updates.frequency !== undefined) {
+      updates.installmentAmount = installmentFor({
+        target: finalTarget,
+        deadline: finalDeadline,
+        frequency: finalFrequency,
+      });
+    }
+
+    const updatedGoal = updateGoal(id, updates);
+
+    return NextResponse.json({
+      success: true,
+      goal: updatedGoal,
+      message: "Goal updated successfully",
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err.message || "Failed to update goal" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const goal = getGoal(id);
+
+    if (!goal) {
+      return NextResponse.json(
+        { success: false, error: "Goal not found" },
+        { status: 404 }
+      );
+    }
+
+    await closeGoal(id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Goal closed successfully",
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err.message || "Failed to close goal" },
       { status: 500 }
     );
   }

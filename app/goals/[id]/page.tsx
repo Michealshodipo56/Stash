@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowLeft,
@@ -17,122 +17,161 @@ import {
   Send,
   X,
   UserMinus,
-  Sparkles,
-  Share2,
   TrendingUp,
+  Bell,
+  ChevronDown,
+  Plus,
+  Share2,
+  Settings,
+  Edit3,
+  PauseCircle,
+  PlayCircle,
+  Trash2,
+  Lightbulb,
+  ShieldCheck,
+  MessageSquare,
+  CheckCircle2,
+  HelpCircle,
+  UserPlus,
+  Package,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
-import { ProgressBar } from "@/app/components/ProgressBar";
 import { Avatar } from "@/app/components/Avatar";
 import { useAuth } from "@/app/context/AuthContext";
-import {
-  getGoal,
-  goalMembers,
-  goalContributions,
-  activeWithdrawal,
-  votesFor,
-  quorumFor,
-  refundBreakdown,
-  getUser,
-  usersMap,
-} from "@/lib/store";
-import { formatNaira, formatDate, pct, daysLeft } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { getUser, usersMap } from "@/lib/store";
+import { formatNaira, formatDate, pct, daysLeft, cn } from "@/lib/utils";
+import { Frequency } from "@/lib/types";
 
 export default function GoalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { user } = useAuth();
 
-  // Sync state with lib/store.ts
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
 
-  const goal = getGoal(id);
-  if (!goal) return notFound();
+  const [goalData, setGoalData] = useState<{
+    goal: any;
+    contributions: any[];
+    members: any[];
+    owner: any;
+    withdrawalReq: any;
+    votes: any[];
+    quorum: any;
+    refunds: any[];
+  } | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [notFoundState, setNotFoundState] = useState(false);
 
-  const members = goalMembers(id);
-  const contributions = goalContributions(id);
-  const saved = contributions.reduce((s, c) => s + c.amount, 0);
-  const progress = pct(saved, goal.targetAmount);
-  const days = daysLeft(goal.deadline);
-  const isGroup = goal.type === "group";
-  const owner = getUser(goal.ownerId);
+  // Modals & Notices
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showChangePlanModal, setShowChangePlanModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showTip, setShowTip] = useState(true);
+  const [copiedAccount, setCopiedAccount] = useState(false);
 
-  const withdrawalReq = activeWithdrawal(id);
-  const votes = withdrawalReq ? votesFor(withdrawalReq.id) : [];
-  const quorum = isGroup ? quorumFor(id) : undefined;
-  const refunds = isGroup ? refundBreakdown(id) : [];
+  // Form & Action states
+  const [depositAmount, setDepositAmount] = useState("15000");
+  const [contributorUser, setContributorUser] = useState(user?.id || "");
+  const [contributorName, setContributorName] = useState(user?.name || "Member");
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberContact, setNewMemberContact] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Flow 5a Adjustment state
+  // Form states for Plan & Edit
+  const [editTitle, setEditTitle] = useState("");
+  const [editTarget, setEditTarget] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
+  const [editFrequency, setEditFrequency] = useState<Frequency>("daily");
+
   const [adjustmentNotice, setAdjustmentNotice] = useState<{
     memberName: string;
     refundedAmount: number;
     newInstallment: number;
   } | null>(null);
-
-  // Completion Celebration State
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [hasCelebrated, setHasCelebrated] = useState(false);
-
-  useEffect(() => {
-    if (progress >= 100 && !hasCelebrated) {
-      setShowCelebration(true);
-      setHasCelebrated(true);
-    }
-  }, [progress, hasCelebrated]);
-
-  // Modals
-  const [showDepositModal, setShowDepositModal] = useState(false);
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
 
-  const { user } = useAuth();
-
-  // Form states
-  const [depositAmount, setDepositAmount] = useState("15000");
-  const [contributorUser, setContributorUser] = useState(user?.id || "");
-  const [contributorName, setContributorName] = useState(user?.name || "Member");
-  const [withdrawReason, setWithdrawReason] = useState("Goal no longer needed — item acquired through another channel.");
-  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let isMounted = true;
+    async function loadGoal() {
+      setDataLoading(true);
+      try {
+        const res = await fetch(`/api/goals/${id}`);
+        const data = await res.json();
+        if (isMounted) {
+          if (data.success && data.goal) {
+            setGoalData(data);
+            setNotFoundState(false);
+            setEditTitle(data.goal.title || "");
+            setEditTarget(String(data.goal.targetAmount || ""));
+            setEditDeadline(data.goal.deadline || "");
+            setEditFrequency(data.goal.frequency || "daily");
+          } else {
+            setNotFoundState(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load goal:", err);
+        if (isMounted) setNotFoundState(true);
+      } finally {
+        if (isMounted) setDataLoading(false);
+      }
+    }
+    loadGoal();
+    return () => {
+      isMounted = false;
+    };
+  }, [id, tick]);
 
   useEffect(() => {
     if (user?.id && !contributorUser) {
       setContributorUser(user.id);
       setContributorName(user.name);
     }
-  }, [user]);
+  }, [user, contributorUser]);
 
-  // Flow 5a: Admin Remove Member
-  async function handleRemoveMember(memberUserId: string) {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/members/remove", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          goalId: id,
-          memberUserId,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAdjustmentNotice({
-          memberName: data.memberName,
-          refundedAmount: data.refundedAmount,
-          newInstallment: data.newInstallment,
-        });
-        refresh();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-      setMemberToRemove(null);
-    }
+  function triggerToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
   }
 
-  // Handle simulated bank deposit
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-[#FBF9F4] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 rounded-full border-4 border-[#5FA618] border-t-transparent animate-spin mx-auto" />
+          <p className="text-sm font-medium text-[#595B52]">Loading goal details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (notFoundState || !goalData?.goal) {
+    return notFound();
+  }
+
+  const goal = goalData.goal;
+  const members = goalData.members || [];
+  const contributions = goalData.contributions || [];
+  const saved = contributions.reduce((acc: number, c: any) => acc + c.amount, 0);
+  const progress = pct(saved, goal.targetAmount);
+  const days = daysLeft(goal.deadline);
+  const isGroup = goal.type === "group";
+  const owner = goalData.owner;
+  const isPaused = goal.status === "paused";
+  const isClosed = goal.status === "completed" || goal.status === "closed" || goal.status === "withdrawn";
+
+  const accountNumber = goal.virtualAccountNumber || goal.virtualAccount?.accountNumber || "9910004677";
+  const bankName = goal.virtualAccountBank || goal.virtualAccount?.bankName || "Providus Bank";
+
+  // Actions
   async function handleDeposit(e: React.FormEvent) {
     e.preventDefault();
+    if (!depositAmount || Number(depositAmount) <= 0) return;
     setLoading(true);
     try {
       const res = await fetch("/api/contributions", {
@@ -145,9 +184,12 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
           amount: Number(depositAmount),
         }),
       });
-      await res.json();
-      refresh();
-      setShowDepositModal(false);
+      const data = await res.json();
+      if (data.success) {
+        triggerToast(`Successfully deposited ₦${Number(depositAmount).toLocaleString()}!`);
+        refresh();
+        setShowDepositModal(false);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -155,24 +197,21 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  // Handle Flow 5b cancellation proposal
-  async function handleRequestWithdrawal(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleUpdateGoal(updates: Partial<any>) {
     setLoading(true);
     try {
-      const res = await fetch("/api/withdrawals", {
-        method: "POST",
+      const res = await fetch(`/api/goals/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "propose",
-          goalId: id,
-          requestedBy: user?.id || goal?.ownerId || "u_creator",
-          reason: withdrawReason,
-        }),
+        body: JSON.stringify(updates),
       });
-      await res.json();
-      refresh();
-      setShowWithdrawModal(false);
+      const data = await res.json();
+      if (data.success) {
+        triggerToast(data.message || "Goal updated!");
+        refresh();
+        setShowChangePlanModal(false);
+        setShowEditModal(false);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -180,721 +219,1001 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  // Handle voting
-  async function handleVote(approve: boolean, voterId?: string) {
-    if (!withdrawalReq) return;
+  async function handleTogglePause() {
+    await handleUpdateGoal({ status: isPaused ? "active" : "paused" });
+  }
+
+  async function handleCloseGoal() {
+    setLoading(true);
     try {
-      const res = await fetch("/api/withdrawals", {
+      const res = await fetch(`/api/goals/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        triggerToast("Goal successfully closed & funds processed!");
+        setShowCloseModal(false);
+        refresh();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newMemberName.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/members/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "vote",
-          requestId: withdrawalReq.id,
-          voterId: voterId || user?.id || goal?.ownerId || "u_voter",
-          vote: approve,
+          goalId: id,
+          name: newMemberName.trim(),
+          emailOrPhone: newMemberContact.trim() || undefined,
         }),
       });
-      await res.json();
-      refresh();
+      const data = await res.json();
+      if (data.success) {
+        triggerToast(`${data.user?.name || newMemberName} added to goal!`);
+        setNewMemberName("");
+        setNewMemberContact("");
+        setShowAddMemberModal(false);
+        refresh();
+      }
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   }
+
+  function handleCopyAccount() {
+    navigator.clipboard.writeText(accountNumber);
+    setCopiedAccount(true);
+    triggerToast("Account number copied!");
+    setTimeout(() => setCopiedAccount(false), 2000);
+  }
+
+  // Calculate frequency limit for change plan modal
+  const maxFreq: Frequency = days < 7 ? "daily" : days < 30 ? "weekly" : days < 365 ? "monthly" : "yearly";
 
   return (
     <div className="min-h-screen bg-[#FBF9F4] text-[#17170F] font-sans">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#FBF9F4]/90 backdrop-blur-sm border-b border-[#E9E8E0]">
-        <div className="mx-auto max-w-xl px-4 py-3 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 text-[#595B52] hover:text-[#17170F] transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Dashboard</span>
-          </Link>
-          <Logo className="text-xl" />
-          <div className="w-20" />
+      {/* Toast notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-5 right-5 z-50 bg-[#17170F] text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4 text-[#8CC63F]" />
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Header */}
+      <header className="sticky top-0 z-40 bg-white border-b border-[#E9E8E0]">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <Logo className="text-xl" />
+            </Link>
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#595B52]">
+              <Link href="/dashboard" className="hover:text-[#17170F] transition">Dashboard</Link>
+              <Link href="/goals" className="text-[#17170F] font-bold border-b-2 border-[#5FA618] pb-0.5">My Goals</Link>
+              <Link href="/transactions" className="hover:text-[#17170F] transition">Transactions</Link>
+              <Link href="/learn" className="hover:text-[#17170F] transition">Learn</Link>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button className="relative p-2 rounded-full hover:bg-gray-100 text-gray-600 transition">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#5FA618]" />
+            </button>
+            <div className="flex items-center gap-2 cursor-pointer pl-2 border-l border-gray-200">
+              <Avatar name={user?.name || "Tolu Adeyemi"} color={user?.avatarColor || "#5FA618"} size="sm" />
+              <span className="text-xs font-bold text-[#17170F] hidden sm:inline">{user?.name || "Tolu Adeyemi"}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-xl px-4 py-8 space-y-5">
-        {/* Animated Flow 5a Adjustment Banner */}
-        <AnimatePresence>
-          {adjustmentNotice && (
-            <motion.div
-              initial={{ opacity: 0, y: -16, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -16 }}
-              className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 relative shadow-sm"
-            >
-              <button
-                onClick={() => setAdjustmentNotice(null)}
-                className="absolute top-3 right-3 text-amber-700 hover:text-amber-900"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-amber-200 text-amber-900 shrink-0">
-                  <TrendingUp className="w-5 h-5" />
+      <main className="max-w-6xl mx-auto px-4 md:px-8 py-6 space-y-6">
+        {/* Two-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column (Main Content) */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* HERO CARD */}
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm relative space-y-6">
+              {/* Header Info Row */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  {/* Thumbnail Image Box */}
+                  <div className="w-16 h-16 rounded-2xl bg-[#F3F8EC] border border-[#E2EED3] flex items-center justify-center shrink-0">
+                    <Package className="w-8 h-8 text-[#5FA618]" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-gray-100 text-[#595B52]">
+                        {isGroup ? <Users className="w-3 h-3 text-[#5FA618]" /> : null}
+                        {isGroup ? "Group goal" : "👤 Personal goal"}
+                      </span>
+                      {isPaused && (
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                          Paused
+                        </span>
+                      )}
+                      {isClosed && (
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-800">
+                          Closed
+                        </span>
+                      )}
+                    </div>
+                    <h1 className="text-xl md:text-2xl font-extrabold text-[#17170F] leading-tight">
+                      {goal.title}
+                    </h1>
+                    <p className="text-xs text-[#73756C]">
+                      Target Deadline: {formatDate(goal.deadline)} • <strong className="text-[#17170F]">{days} days remaining</strong>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-display font-bold text-sm text-amber-900">
-                    Member Removed &amp; Installments Recalculated (Flow 5a)
-                  </p>
-                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                    <strong>{adjustmentNotice.memberName}</strong> was removed by Admin and refunded{" "}
-                    <strong>{formatNaira(adjustmentNotice.refundedAmount)}</strong> to their bank account.
-                  </p>
-                  <p className="text-xs text-amber-900 font-semibold mt-2">
-                    Remaining members&apos; installment adjusted to:{" "}
-                    <span className="text-sm font-bold underline">
-                      {formatNaira(adjustmentNotice.newInstallment)} / {goal.frequency}
+
+                {/* Manage goal dropdown button */}
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#E9E8E0] hover:bg-gray-50 text-[#17170F] transition shrink-0"
+                >
+                  <Settings className="w-3.5 h-3.5 text-gray-500" />
+                  Manage goal
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Progress & Saved Stats */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-baseline justify-between">
+                  <div>
+                    <span className="text-2xl md:text-3xl font-extrabold text-[#17170F]">
+                      {formatNaira(saved)}
                     </span>
-                  </p>
+                    <span className="text-xs text-[#73756C] ml-2">
+                      saved of <strong className="text-[#17170F]">{formatNaira(goal.targetAmount)}</strong>
+                    </span>
+                  </div>
+
+                  {/* Circular Percentage Badge */}
+                  <div className="w-12 h-12 rounded-full bg-[#F3F8EC] border-2 border-[#5FA618] flex flex-col items-center justify-center text-center">
+                    <span className="text-xs font-black text-[#17170F]">{progress}%</span>
+                    <span className="text-[8px] font-semibold text-[#5FA618]">Funded</span>
+                  </div>
+                </div>
+
+                {/* Linear Green Progress Bar */}
+                <div className="relative w-full h-3 rounded-full bg-[#EAE8E0] overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, progress)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full rounded-full bg-[#5FA618]"
+                  />
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        {/* Hero card */}
-        <div className="rounded-2xl bg-[#17170F] text-cream p-6 shadow-md">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-3xl">{goal.emoji ?? "🎯"}</span>
-                {isGroup && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold">
-                    <Users className="h-3 w-3" /> Group Goal
-                  </span>
-                )}
-                {goal.status === "withdrawn" && (
-                  <span className="rounded-full bg-coral-500/30 border border-coral-400/40 text-coral-300 text-xs px-2.5 py-0.5 font-bold">
-                    Emergency Withdrawn
-                  </span>
-                )}
-                {goal.status === "completed" && (
-                  <span className="rounded-full bg-brand-500 text-[#17170F] text-xs px-2.5 py-0.5 font-bold">
-                    Target Met ✓
-                  </span>
+              {/* 3 Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="bg-[#F7FAEE] border border-[#E5EED8] rounded-2xl p-3.5 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-base shrink-0 shadow-2xs">
+                    🗓️
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold text-[#17170F]">{days} days left</p>
+                    <p className="text-[10px] text-[#73756C]">to reach your goal</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#F7FAEE] border border-[#E5EED8] rounded-2xl p-3.5 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-base shrink-0 shadow-2xs">
+                    🎯
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs font-extrabold text-[#17170F]">
+                        {formatNaira(goal.installmentAmount)} / {goal.frequency}
+                      </p>
+                      <HelpCircle className="w-3 h-3 text-gray-400" />
+                    </div>
+                    <p className="text-[10px] text-[#73756C] capitalize">{goal.frequency} target</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#F7FAEE] border border-[#E5EED8] rounded-2xl p-3.5 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-base shrink-0 shadow-2xs">
+                    👥
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold text-[#17170F]">
+                      {isGroup ? `${members.length} contributors` : "Solo goal"}
+                    </p>
+                    <p className="text-[10px] text-[#73756C]">
+                      {isGroup ? "Group stash" : "No contributors yet"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  disabled={isClosed}
+                  onClick={() => setShowDepositModal(true)}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-[#5FA618] text-white font-bold text-xs hover:bg-[#529113] active:scale-[0.99] transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add money
+                </button>
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="flex-1 py-3 px-4 rounded-2xl border border-[#DCDBCF] bg-white text-[#17170F] font-bold text-xs hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                >
+                  <Share2 className="w-4 h-4 text-gray-600" />
+                  Share goal
+                </button>
+              </div>
+            </div>
+
+            {/* YOUR PROGRESS CARD */}
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-[#17170F]">Your progress</h2>
+
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-[#FAF9F5] border border-[#EAE8E0] rounded-2xl p-5">
+                {/* Donut Progress Meter */}
+                <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-[#E5E3D8]"
+                      strokeWidth="3.5"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className="text-[#5FA618]"
+                      strokeDasharray={`${progress}, 100`}
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className="absolute flex flex-col items-center justify-center text-center">
+                    <span className="text-lg font-black text-[#17170F]">{progress}%</span>
+                    <span className="text-[10px] text-[#73756C] font-semibold">Complete</span>
+                  </div>
+                </div>
+
+                {/* Progress Details & Checkbox List */}
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#17170F]">
+                      {progress === 0 ? "You're just getting started!" : progress >= 100 ? "🎉 Goal Complete!" : "Keep up the momentum!"}
+                    </h3>
+                    <p className="text-xs text-[#73756C] mt-0.5 leading-relaxed">
+                      Start with a small deposit today and stay consistent. Small steps lead to big wins.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#F3F8EC] border border-[#E2EED3] rounded-xl p-3 space-y-1.5">
+                    <p className="text-[11px] font-bold text-[#3B6A0E]">When you stay on plan:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[11px] font-semibold text-[#17170F]">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#5FA618] shrink-0" />
+                        Build discipline
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#5FA618] shrink-0" />
+                        Reach target faster
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#5FA618] shrink-0" />
+                        Stay financially secure
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* GROUP MEMBERS SECTION */}
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-[#17170F] flex items-center gap-2">
+                    Group members
+                    <span className="text-xs font-semibold text-[#73756C] bg-gray-100 px-2 py-0.5 rounded-full">
+                      {members.length > 0 ? members.length : 1}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-[#73756C] mt-0.5">
+                    {isGroup
+                      ? "Members contributing to this shared goal"
+                      : "Add members to invite friends & split installment targets"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAddMemberModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#5FA618] text-white px-3 py-2 rounded-xl hover:bg-[#4E8B13] transition shadow-sm"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Add member
+                </button>
+              </div>
+
+              {/* Members List */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {members.length > 0 ? (
+                  members.map((m: any) => {
+                    const memberUser = usersMap[m.userId] || {
+                      name: m.name || "Goal Member",
+                      avatarColor: "#5FA618",
+                    };
+                    const isOwnerMember = m.userId === goal.ownerId || m.role === "admin";
+                    return (
+                      <div
+                        key={m.id || m.userId}
+                        className="flex items-center justify-between p-3 rounded-2xl bg-[#FBF9F4] border border-[#E9E8E0]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            name={memberUser.name}
+                            color={memberUser.avatarColor || "#5FA618"}
+                            size="md"
+                          />
+                          <div>
+                            <p className="text-xs font-bold text-[#17170F] flex items-center gap-1.5">
+                              {memberUser.name}
+                              {isOwnerMember && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E2EED3] text-[#3B6A0E]">
+                                  Admin
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-[#73756C]">
+                              {isGroup ? `₦${Number(goal.installmentAmount).toLocaleString()} / ${goal.frequency}` : "Active contributor"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FBF9F4] border border-[#E9E8E0] col-span-full">
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={owner?.name || user?.name || "Tolu Adeyemi"}
+                        color={owner?.avatarColor || user?.avatarColor || "#5FA618"}
+                        size="md"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-[#17170F] flex items-center gap-1.5">
+                          {owner?.name || user?.name || "Tolu Adeyemi"}
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E2EED3] text-[#3B6A0E]">
+                            Owner & Admin
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-[#73756C]">
+                          ₦{Number(goal.installmentAmount).toLocaleString()} / {goal.frequency}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <h1 className="font-display text-2xl font-bold leading-tight">{goal.title}</h1>
-              <p className="text-cream/60 text-xs mt-0.5">
-                Target Deadline: {formatDate(goal.deadline)} · {days} day{days !== 1 ? "s" : ""} remaining
+            </div>
+
+            {/* LIVE ACTIVITY FEED */}
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-[#17170F] flex items-center gap-2">
+                  Live activity feed
+                  <span className="text-xs font-semibold text-[#73756C] bg-gray-100 px-2 py-0.5 rounded-full">
+                    {contributions.length}
+                  </span>
+                </h2>
+                {contributions.length > 0 && (
+                  <button className="text-xs font-bold text-[#5FA618] hover:underline">
+                    View all →
+                  </button>
+                )}
+              </div>
+
+              {contributions.length === 0 ? (
+                <div className="text-center py-8 space-y-2 border border-dashed border-[#E0DFD5] rounded-2xl bg-[#FAF9F5]">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-bold text-[#17170F]">No deposits received yet.</p>
+                  <p className="text-[11px] text-[#73756C]">Your contributions and activity will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {contributions.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#FAF9F5] border border-[#EAE8E0]">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={c.contributorName} color="#5FA618" size="sm" />
+                        <div>
+                          <p className="text-xs font-bold text-[#17170F]">{c.contributorName}</p>
+                          <p className="text-[10px] text-[#73756C]">{formatDate(c.receivedAt)}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-extrabold text-[#5FA618]">
+                        +{formatNaira(c.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right Column (Sidebar Cards) */}
+          <div className="space-y-6">
+            
+            {/* FUND THIS GOAL CARD */}
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-[#17170F]">Fund this goal</h2>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#3B6A0E] bg-[#F3F8EC] px-2.5 py-1 rounded-full border border-[#E2EED3]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#5FA618]" />
+                  Secure &amp; easy
+                </span>
+              </div>
+
+              <p className="text-xs text-[#73756C] leading-relaxed">
+                Transfer money to this dedicated account — no account needed to contribute.
               </p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="font-display font-bold text-3xl tabular">{progress}%</p>
-              <p className="text-cream/50 text-[10px] uppercase font-bold tracking-wider">funded</p>
-            </div>
-          </div>
 
-          <ProgressBar
-            value={progress}
-            color={goal.status === "withdrawn" ? "coral" : progress >= 100 ? "brand" : isGroup ? "amber" : "brand"}
-            className="mb-4 h-3 rounded-full"
-            showPulse={progress >= 100}
-          />
+              {/* Bank Account Details Tile */}
+              <div className="bg-[#F8FAF4] border border-[#E5EED8] rounded-2xl p-4 space-y-2">
+                <p className="text-[11px] font-semibold text-[#73756C]">{bankName}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xl md:text-2xl font-black text-[#17170F] tracking-wider font-mono">
+                    {accountNumber}
+                  </span>
+                  <button
+                    onClick={handleCopyAccount}
+                    className="px-3 py-1.5 rounded-xl bg-[#17170F] text-white text-xs font-bold flex items-center gap-1 hover:bg-black transition active:scale-95 shrink-0"
+                  >
+                    {copiedAccount ? <Check className="w-3.5 h-3.5 text-[#5FA618]" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedAccount ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </div>
 
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-2xl font-display font-bold tabular">{formatNaira(saved)}</p>
-              <p className="text-cream/50 text-xs">saved of {formatNaira(goal.targetAmount)}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-semibold tabular text-sm">{formatNaira(Math.max(0, goal.targetAmount - saved))}</p>
-              <p className="text-cream/50 text-xs">remaining</p>
-            </div>
-          </div>
+              <p className="text-[11px] text-[#73756C]">
+                Use <strong className="text-[#17170F]">{goal.title}</strong> as your transfer narration.
+              </p>
 
-          {progress >= 100 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-5 flex items-center gap-3 rounded-xl bg-brand-500/20 border border-brand-400/40 p-3.5"
-            >
-              <Trophy className="h-6 w-6 text-brand-400 shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-brand-300">
-                  🎉 Goal Completed! Instant Settlement
-                </p>
-                <p className="text-[11px] text-cream/70 mt-0.5">
-                  Full amount ({formatNaira(saved)}) offramped to {isGroup ? "Admin's" : "Owner's"} linked bank account ({owner?.bankName ?? "GTBank"}).
+              {/* Simulate Bank Deposit Action Button */}
+              <button
+                disabled={isClosed}
+                onClick={() => setShowDepositModal(true)}
+                className="w-full py-3 px-4 rounded-2xl bg-[#F3F8EC] border border-[#E2EED3] text-[#3B6A0E] font-bold text-xs hover:bg-[#EAF4DB] transition flex items-center justify-between group disabled:opacity-50"
+              >
+                <span className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-[#5FA618]" />
+                  Simulate Bank Deposit
+                </span>
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </button>
+            </div>
+
+            {/* QUICK ACTIONS CARD */}
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-[#17170F]">Quick actions</h2>
+
+              <div className="space-y-2.5">
+                {/* Change plan */}
+                <button
+                  disabled={isClosed}
+                  onClick={() => setShowChangePlanModal(true)}
+                  className="w-full p-3.5 rounded-2xl border border-[#EAE8E0] hover:border-[#5FA618] hover:bg-[#FAF9F5] transition text-left flex items-center justify-between group disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#F3F8EC] text-[#5FA618] flex items-center justify-center">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#17170F]">Change plan</p>
+                      <p className="text-[10px] text-[#73756C]">Adjust daily, weekly or monthly target</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+
+                {/* Edit goal details */}
+                <button
+                  disabled={isClosed}
+                  onClick={() => setShowEditModal(true)}
+                  className="w-full p-3.5 rounded-2xl border border-[#EAE8E0] hover:border-[#5FA618] hover:bg-[#FAF9F5] transition text-left flex items-center justify-between group disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#F3F8EC] text-[#5FA618] flex items-center justify-center">
+                      <Edit3 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#17170F]">Edit goal details</p>
+                      <p className="text-[10px] text-[#73756C]">Update name, target or deadline</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+
+                {/* Pause goal */}
+                <button
+                  disabled={isClosed}
+                  onClick={handleTogglePause}
+                  className="w-full p-3.5 rounded-2xl border border-[#EAE8E0] hover:border-amber-400 hover:bg-amber-50/50 transition text-left flex items-center justify-between group disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                      {isPaused ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#17170F]">
+                        {isPaused ? "Resume goal" : "Pause goal"}
+                      </p>
+                      <p className="text-[10px] text-[#73756C]">
+                        {isPaused ? "Re-enable deposits & notifications" : "Take a break without losing progress"}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+
+                {/* Close goal */}
+                <button
+                  disabled={isClosed}
+                  onClick={() => setShowCloseModal(true)}
+                  className="w-full p-3.5 rounded-2xl border border-red-200 bg-red-50/30 hover:bg-red-50 hover:border-red-300 transition text-left flex items-center justify-between group disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center">
+                      <Trash2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-red-600">Close goal</p>
+                      <p className="text-[10px] text-red-500">Withdraw and end this goal</p>
+                    </div>
+                  </div>
+                  <span className="text-red-400 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+              </div>
+            </div>
+
+            {/* SAVINGS TIP CARD */}
+            {showTip && (
+              <div className="bg-[#F7FAEE] border border-[#E5EED8] rounded-3xl p-4 relative space-y-2">
+                <button
+                  onClick={() => setShowTip(false)}
+                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xs"
+                >
+                  ✕
+                </button>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#5FA618] text-white flex items-center justify-center shrink-0">
+                    <Lightbulb className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-xs font-bold text-[#17170F]">Savings tip</h3>
+                </div>
+                <p className="text-xs text-[#595B52] leading-relaxed">
+                  Automate small, regular deposits. Consistency beats big, one-time payments.
                 </p>
               </div>
-            </motion.div>
-          )}
-        </div>
+            )}
 
-        {/* Virtual account tile + Deposit Simulator */}
-        {goal.virtualAccountNumber && goal.status === "active" && (
-          <VirtualAccountTile
-            accountNumber={goal.virtualAccountNumber}
-            bank={goal.virtualAccountBank ?? "Providus Bank"}
-            goalTitle={goal.title}
-            onOpenDeposit={() => setShowDepositModal(true)}
-          />
-        )}
-
-        {/* Emergency withdrawal / quorum governance (Flow 5b) */}
-        {withdrawalReq && quorum ? (
-          <QuorumGovernanceCard
-            request={withdrawalReq}
-            quorum={quorum}
-            refunds={refunds}
-            pool={saved}
-            onVote={handleVote}
-            voterName={user?.name || owner?.name || "Admin"}
-            voterId={user?.id || goal.ownerId}
-          />
-        ) : isGroup && goal.status === "active" && (
-          <div className="rounded-2xl border border-[#E9E8E0] bg-white p-4 flex items-center justify-between shadow-2xs">
-            <div>
-              <p className="text-xs font-bold text-[#17170F]">Group Cancellation Vote (Flow 5b)</p>
-              <p className="text-xs text-[#595B52]">Propose ending goal and refunding all members proportionally.</p>
-            </div>
-            <button
-              onClick={() => setShowWithdrawModal(true)}
-              className="rounded-xl border border-coral-300 bg-coral-50 text-coral-600 px-3.5 py-2 text-xs font-bold hover:bg-coral-100 transition-colors"
-            >
-              Propose Cancellation
-            </button>
           </div>
-        )}
-
-        {/* Group members list with Flow 5a Admin Removal */}
-        {isGroup && members.length > 0 && (
-          <MembersList
-            members={members}
-            contributions={contributions}
-            saved={saved}
-            isAdmin={true}
-            onRemoveMember={(m) => setMemberToRemove(m)}
-          />
-        )}
-
-        {/* Contributions list */}
-        <ContributionsList contributions={contributions} />
-
-        {/* Installment schedule */}
-        <div className="rounded-2xl bg-white border border-[#E9E8E0] p-4 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2 text-sm text-[#595B52]">
-            <Clock className="h-4 w-4 shrink-0" />
-            <span className="font-medium">Calculated Installment Plan</span>
-          </div>
-          <p className="text-sm font-bold text-[#17170F] tabular">
-            {formatNaira(goal.installmentAmount)} / {goal.frequency}
-          </p>
         </div>
       </main>
 
-      {/* ── Goal Completed Celebration Modal ──────────────── */}
+      {/* ── MODAL 1: SIMULATE DEPOSIT ────────────────────── */}
       <AnimatePresence>
-        {showCelebration && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+        {showDepositModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl border border-brand-200"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-[#E9E8E0]"
             >
-              <div className="w-16 h-16 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center mx-auto text-3xl animate-bounce">
-                🏆
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="text-base font-extrabold text-[#17170F]">Simulate Bank Deposit</h3>
+                <button onClick={() => setShowDepositModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <h2 className="font-display text-2xl font-extrabold text-[#17170F]">
-                Goal Target Reached!
-              </h2>
+
+              <form onSubmit={handleDeposit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">Transfer Amount (₦)</label>
+                  <input
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-sm font-bold font-mono text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#5FA618]"
+                    placeholder="15000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">Select Contributor</label>
+                  <select
+                    value={contributorUser}
+                    onChange={(e) => {
+                      setContributorUser(e.target.value);
+                      if (e.target.value === user?.id) {
+                        setContributorName(user.name);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs font-medium text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#5FA618]"
+                  >
+                    <option value={user?.id || "u_creator"}>{user?.name || "Tolu Adeyemi"} (You)</option>
+                    <option value="u_custom">External Contributor (No Account Required)</option>
+                  </select>
+                </div>
+
+                {contributorUser === "u_custom" && (
+                  <div>
+                    <label className="block text-xs font-bold text-[#17170F] mb-1">Sender Name</label>
+                    <input
+                      type="text"
+                      value={contributorName}
+                      onChange={(e) => setContributorName(e.target.value)}
+                      className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#5FA618]"
+                      placeholder="Enter contributor name"
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDepositModal(false)}
+                    className="flex-1 rounded-2xl border border-gray-200 py-3 text-xs font-bold text-[#17170F]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || !depositAmount}
+                    className="flex-1 rounded-2xl bg-[#5FA618] py-3 text-xs font-bold text-white hover:bg-[#529113] disabled:opacity-50"
+                  >
+                    {loading ? "Processing..." : "Confirm Deposit 💸"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL 2: CHANGE PLAN ─────────────────────────── */}
+      <AnimatePresence>
+        {showChangePlanModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-[#E9E8E0]"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="text-base font-extrabold text-[#17170F]">Change Savings Plan</h3>
+                <button onClick={() => setShowChangePlanModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1.5">Select Frequency</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["daily", "weekly", "monthly", "yearly"] as Frequency[]).map((f) => {
+                      const isDisabled =
+                        (f === "yearly" && (maxFreq === "daily" || maxFreq === "weekly" || maxFreq === "monthly")) ||
+                        (f === "monthly" && (maxFreq === "daily" || maxFreq === "weekly")) ||
+                        (f === "weekly" && maxFreq === "daily");
+                      return (
+                        <button
+                          key={f}
+                          type="button"
+                          disabled={isDisabled}
+                          onClick={() => setEditFrequency(f)}
+                          className={cn(
+                            "py-2.5 px-3 rounded-xl border text-xs font-bold capitalize transition",
+                            editFrequency === f
+                              ? "bg-[#5FA618] text-white border-[#5FA618]"
+                              : isDisabled
+                              ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                              : "bg-white text-[#17170F] border-gray-200 hover:bg-gray-50"
+                          )}
+                        >
+                          {f}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {maxFreq !== "yearly" && (
+                    <p className="text-[10px] text-amber-700 mt-2">
+                      ⚠️ Options restricted based on deadline duration ({days} days left).
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowChangePlanModal(false)}
+                    className="flex-1 rounded-2xl border border-gray-200 py-3 text-xs font-bold text-[#17170F]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleUpdateGoal({ frequency: editFrequency })}
+                    className="flex-1 rounded-2xl bg-[#5FA618] py-3 text-xs font-bold text-white hover:bg-[#529113] disabled:opacity-50"
+                  >
+                    {loading ? "Updating..." : "Save Plan"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL 3: EDIT GOAL DETAILS ───────────────────── */}
+      <AnimatePresence>
+        {showEditModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-[#E9E8E0]"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="text-base font-extrabold text-[#17170F]">Edit Goal Details</h3>
+                <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">Goal Title</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs font-bold text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#5FA618]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">Target Amount (₦)</label>
+                  <input
+                    type="number"
+                    value={editTarget}
+                    onChange={(e) => setEditTarget(e.target.value)}
+                    className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs font-bold font-mono text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#5FA618]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">Target Deadline</label>
+                  <input
+                    type="date"
+                    value={editDeadline}
+                    onChange={(e) => setEditDeadline(e.target.value)}
+                    className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs font-bold text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#5FA618]"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="flex-1 rounded-2xl border border-gray-200 py-3 text-xs font-bold text-[#17170F]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading || !editTitle.trim()}
+                    onClick={() =>
+                      handleUpdateGoal({
+                        title: editTitle,
+                        targetAmount: Number(editTarget),
+                        deadline: editDeadline,
+                      })
+                    }
+                    className="flex-1 rounded-2xl bg-[#5FA618] py-3 text-xs font-bold text-white hover:bg-[#529113] disabled:opacity-50"
+                  >
+                    {loading ? "Saving..." : "Update Details"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL 4: CLOSE GOAL ──────────────────────────── */}
+      <AnimatePresence>
+        {showCloseModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-red-200 text-center"
+            >
+              <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto text-xl">
+                ⚠️
+              </div>
+              <h3 className="text-lg font-extrabold text-[#17170F]">Close Goal &amp; Withdraw Funds?</h3>
               <p className="text-xs text-[#595B52] leading-relaxed">
-                Congratulations! You&apos;ve successfully saved{" "}
-                <strong className="text-[#17170F]">{formatNaira(saved)}</strong> for{" "}
-                <strong className="text-[#17170F]">{goal.title}</strong>.
+                Closing this goal will immediately process your total accumulated balance of{" "}
+                <strong className="text-[#17170F]">{formatNaira(saved)}</strong> back to your linked payout bank account.
               </p>
-              <div className="rounded-xl bg-brand-50 border border-brand-200 p-3 text-xs text-left">
-                <p className="text-[10px] text-brand-700 font-bold uppercase">Automated Offramp</p>
-                <p className="font-semibold text-brand-900 mt-0.5">
-                  Dispatched to {isGroup ? "Admin's" : "Owner's"} bank account via BMONI rail.
-                </p>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCloseModal(false)}
+                  className="flex-1 rounded-2xl border border-gray-200 py-3 text-xs font-bold text-[#17170F]"
+                >
+                  Keep Goal Active
+                </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleCloseGoal}
+                  className="flex-1 rounded-2xl bg-red-600 py-3 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {loading ? "Closing..." : "Close & Withdraw 💸"}
+                </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL 5: SHARE GOAL ─────────────────────────── */}
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-[#E9E8E0]"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="text-base font-extrabold text-[#17170F]">Share Goal Account</h3>
+                <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-[#73756C]">
+                Anyone can send deposits directly to your dedicated virtual account using any mobile banking app in Nigeria!
+              </p>
+
+              <div className="bg-[#F8FAF4] border border-[#E5EED8] rounded-2xl p-4 space-y-1 text-center">
+                <p className="text-xs text-[#73756C]">{bankName}</p>
+                <p className="text-2xl font-black text-[#17170F] font-mono tracking-wider">{accountNumber}</p>
+                <p className="text-[11px] font-semibold text-[#5FA618]">Narration: {goal.title}</p>
+              </div>
+
               <button
-                onClick={() => setShowCelebration(false)}
-                className="w-full py-3 rounded-full bg-[#17170F] text-white text-xs font-bold hover:bg-black transition"
+                onClick={handleCopyAccount}
+                className="w-full py-3 rounded-2xl bg-[#17170F] text-white text-xs font-bold hover:bg-black transition flex items-center justify-center gap-2"
               >
-                View Goal Summary
+                <Copy className="w-4 h-4" />
+                Copy Account Details
               </button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* ── Confirm Flow 5a Member Removal Modal ──────────── */}
-      {memberToRemove && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E9E8E0] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-display font-bold text-base text-[#17170F]">
-                Remove Member (Flow 5a)
-              </h3>
-              <button onClick={() => setMemberToRemove(null)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#595B52] leading-relaxed">
-              Are you sure you want to remove <strong className="text-[#17170F]">{memberToRemove.name}</strong> from this goal?
-            </p>
-
-            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 space-y-1">
-              <p className="font-bold">Automated Flow 5a Rules:</p>
-              <p>• {memberToRemove.name} will be <strong>instantly refunded</strong> their tracked contributions to their bank account.</p>
-              <p>• The remaining target is recalculated and remaining members&apos; installments are automatically adjusted upward.</p>
-              <p>• No group vote is required (Admin action).</p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setMemberToRemove(null)}
-                className="flex-1 rounded-full border border-gray-200 py-2.5 text-xs font-bold text-[#17170F]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleRemoveMember(memberToRemove.id)}
-                className="flex-1 rounded-full bg-coral-500 text-white py-2.5 text-xs font-bold hover:bg-coral-600 disabled:opacity-50"
-              >
-                {loading ? "Processing Refund..." : "Confirm & Refund"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Simulate Deposit Modal ───────────────────────── */}
-      {showDepositModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E9E8E0] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-display font-bold text-base text-[#17170F]">Simulate Bank Deposit</h3>
-              <button onClick={() => setShowDepositModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleDeposit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#17170F] mb-1">Transfer Amount (₦)</label>
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-sm font-bold font-mono text-[#17170F] focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#17170F] mb-1">Select Contributor</label>
-                <select
-                  value={contributorUser}
-                  onChange={(e) => {
-                    setContributorUser(e.target.value);
-                    if (e.target.value === user?.id) {
-                      setContributorName(user.name);
-                    } else {
-                      const userObj = getUser(e.target.value);
-                      if (userObj) setContributorName(userObj.name);
-                    }
-                  }}
-                  className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs font-medium text-[#17170F] focus:outline-none focus:ring-2 focus:ring-brand-400"
-                >
-                  <option value={user?.id || "u_creator"}>{user?.name || "You"} (you)</option>
-                  {members.filter((m) => m.userId !== user?.id).map((m) => {
-                    const u = getUser(m.userId);
-                    return <option key={m.userId} value={m.userId}>{u?.name || "Member"}</option>;
-                  })}
-                  <option value="u_custom">External Contributor (No Account Required)</option>
-                </select>
-              </div>
-
-              {contributorUser === "u_custom" && (
-                <div>
-                  <label className="block text-xs font-bold text-[#17170F] mb-1">Sender Name</label>
-                  <input
-                    type="text"
-                    value={contributorName}
-                    onChange={(e) => setContributorName(e.target.value)}
-                    className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs text-[#17170F] focus:outline-none focus:ring-2 focus:ring-brand-400"
-                  />
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDepositModal(false)}
-                  className="flex-1 rounded-full border border-gray-200 py-2.5 text-xs font-semibold text-[#17170F]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !depositAmount}
-                  className="flex-1 rounded-full bg-brand-500 py-2.5 text-xs font-bold text-[#17170F] hover:bg-brand-400 disabled:opacity-40"
-                >
-                  {loading ? "Processing..." : "Send Simulated Transfer 💸"}
+      {/* ── MODAL 6: ADD MEMBER ─────────────────────────── */}
+      <AnimatePresence>
+        {showAddMemberModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-[#E9E8E0]"
+            >
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 className="text-base font-extrabold text-[#17170F] flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-[#5FA618]" />
+                  Add Member to Goal
+                </h3>
+                <button onClick={() => setShowAddMemberModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* ── Flow 5b Cancellation Proposal Modal ──────────── */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E9E8E0] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="font-display font-bold text-base text-[#17170F]">Propose Group Cancellation</h3>
-              <button onClick={() => setShowWithdrawModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRequestWithdrawal} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#17170F] mb-1">Reason for Cancellation</label>
-                <textarea
-                  value={withdrawReason}
-                  onChange={(e) => setWithdrawReason(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-[#D5D4CA] bg-white p-3 text-xs text-[#17170F] focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
-              </div>
-
-              <p className="text-[11px] text-gray-500">
-                All group members will be invited to vote. If a majority quorum approves, all pooled funds will be refunded proportionally.
+              <p className="text-xs text-[#73756C]">
+                Invite a friend or partner to save towards this target. If this is a personal goal, adding a member automatically converts it into a shared Group Goal.
               </p>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="flex-1 rounded-full border border-gray-200 py-2.5 text-xs font-semibold text-[#17170F]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !withdrawReason.trim()}
-                  className="flex-1 rounded-full bg-coral-500 text-white py-2.5 text-xs font-bold hover:bg-coral-600 disabled:opacity-40"
-                >
-                  {loading ? "Submitting..." : "Submit Proposal 🚨"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Virtual Account tile ──────────────────────────────────── */
-function VirtualAccountTile({
-  accountNumber, bank, goalTitle, onOpenDeposit,
-}: {
-  accountNumber: string; bank: string; goalTitle: string; onOpenDeposit: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  function copy() {
-    navigator.clipboard.writeText(accountNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="rounded-2xl bg-white border border-[#E9E8E0] p-5 shadow-2xs">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-bold text-[#595B52] uppercase tracking-wider">Fund this goal</p>
-        <button
-          onClick={onOpenDeposit}
-          className="flex items-center gap-1 text-xs font-bold text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-2.5 py-1 hover:bg-brand-100 transition-colors"
-        >
-          <Send className="h-3 w-3" /> Simulate Bank Deposit
-        </button>
-      </div>
-
-      <p className="text-xs text-[#595B52] mb-3 leading-relaxed">
-        Transfer to this dedicated account — no account needed to contribute. Use <strong className="text-[#17170F]">{goalTitle}</strong> as your transfer narration.
-      </p>
-
-      <div className="flex items-center gap-3 rounded-xl bg-[#F8F7F2] border border-[#E9E8E0] px-4 py-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-500 mb-0.5">{bank}</p>
-          <p className="font-display font-bold text-[#17170F] text-xl tabular tracking-wider">{accountNumber}</p>
-        </div>
-        <button
-          id="copy-account-btn"
-          onClick={copy}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all",
-            copied ? "bg-brand-100 text-brand-800" : "bg-[#17170F] text-white hover:bg-black"
-          )}
-        >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? "Copied!" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── Members List with Flow 5a Admin Removal ───────────────── */
-function MembersList({
-  members, contributions, saved, isAdmin, onRemoveMember,
-}: {
-  members: ReturnType<typeof goalMembers>;
-  contributions: ReturnType<typeof goalContributions>;
-  saved: number;
-  isAdmin: boolean;
-  onRemoveMember: (member: { id: string; name: string }) => void;
-}) {
-  const users = usersMap();
-  const memberContrib = new Map<string, number>();
-  for (const c of contributions) {
-    if (c.contributorUserId) {
-      memberContrib.set(c.contributorUserId, (memberContrib.get(c.contributorUserId) ?? 0) + c.amount);
-    }
-  }
-
-  return (
-    <div className="rounded-2xl bg-white border border-[#E9E8E0] p-5 shadow-2xs">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-bold text-[#595B52] uppercase tracking-wider">
-          Group Members · {members.length}
-        </p>
-        <span className="text-[11px] text-gray-400">All save on same schedule</span>
-      </div>
-
-      <ul className="space-y-3">
-        {members.map((m) => {
-          const user = users.get(m.userId);
-          if (!user) return null;
-          const contrib = memberContrib.get(user.id) ?? 0;
-          const share = saved > 0 ? (contrib / saved) * 100 : 0;
-          const isMemberAdmin = m.role === "admin";
-
-          return (
-            <li key={m.id} className="flex items-center gap-3 py-1">
-              <Avatar name={user.name} color={user.avatarColor} size="md" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold text-[#17170F] truncate">{user.name}</p>
-                  {isMemberAdmin && (
-                    <span className="rounded-full bg-[#17170F] text-white text-[9px] font-bold px-1.5 py-0.5">
-                      Admin (Payout Recipient)
-                    </span>
-                  )}
+              <form onSubmit={handleAddMember} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">
+                    Member Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Amaka Okafor"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-[#17170F] focus:outline-none focus:border-[#5FA618]"
+                  />
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-amber-400 transition-all duration-500"
-                      style={{ width: `${Math.min(100, share)}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-gray-500 tabular shrink-0">{share.toFixed(0)}%</span>
-                </div>
-              </div>
 
-              <div className="text-right shrink-0 flex items-center gap-3">
-                <p className="text-xs font-bold tabular text-[#17170F]">{formatNaira(contrib)}</p>
-                {/* Flow 5a Admin Action Button */}
-                {isAdmin && !isMemberAdmin && (
+                <div>
+                  <label className="block text-xs font-bold text-[#17170F] mb-1">
+                    Email or Phone (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. amaka@example.com or 08012345678"
+                    value={newMemberContact}
+                    onChange={(e) => setNewMemberContact(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-[#17170F] focus:outline-none focus:border-[#5FA618]"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => onRemoveMember({ id: user.id, name: user.name })}
-                    title="Remove member & auto-refund"
-                    className="p-1 rounded-lg text-gray-400 hover:text-coral-600 hover:bg-coral-50 transition"
+                    onClick={() => setShowAddMemberModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-[#17170F] hover:bg-gray-50 transition"
                   >
-                    <UserMinus className="w-4 h-4" />
+                    Cancel
                   </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-/* ── Contributions List ────────────────────────────────────── */
-function ContributionsList({ contributions }: { contributions: ReturnType<typeof goalContributions> }) {
-  const users = usersMap();
-  return (
-    <div className="rounded-2xl bg-white border border-[#E9E8E0] p-5 shadow-2xs">
-      <p className="text-xs font-bold text-[#595B52] uppercase tracking-wider mb-4">
-        Live Activity Feed · {contributions.length}
-      </p>
-      {contributions.length === 0 ? (
-        <p className="text-xs text-gray-400 text-center py-4">No deposits received yet.</p>
-      ) : (
-        <ul className="space-y-3">
-          {contributions.map((c) => {
-            const user = c.contributorUserId ? users.get(c.contributorUserId) : null;
-            return (
-              <li key={c.id} className="flex items-center gap-3">
-                <Avatar name={c.contributorName} color={user?.avatarColor ?? "#9a9b8f"} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-[#17170F] truncate">{c.contributorName}</p>
-                  <p className="text-[10px] text-gray-400">{formatDate(c.receivedAt)}</p>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-2.5 rounded-xl bg-[#5FA618] text-white text-xs font-bold hover:bg-[#4E8B13] transition disabled:opacity-50"
+                  >
+                    {loading ? "Adding..." : "Add Member"}
+                  </button>
                 </div>
-                <p className="text-xs font-bold tabular text-[#6fa62f] shrink-0">
-                  +{formatNaira(c.amount)}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/* ── Quorum Governance Card (Flow 5b) ──────────────────────── */
-function QuorumGovernanceCard({
-  request, quorum, refunds, pool, onVote, voterName, voterId,
-}: {
-  request: NonNullable<ReturnType<typeof activeWithdrawal>>;
-  quorum: NonNullable<ReturnType<typeof quorumFor>>;
-  refunds: ReturnType<typeof refundBreakdown>;
-  pool: number;
-  onVote: (approve: boolean, voterId: string) => void;
-  voterName?: string;
-  voterId?: string;
-}) {
-  const requester = getUser(request.requestedBy);
-
-  return (
-    <div className="rounded-2xl border-2 border-coral-300 bg-coral-50/50 p-5 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-coral-100 p-2 shrink-0">
-          <AlertTriangle className="h-5 w-5 text-coral-500" />
-        </div>
-        <div>
-          <p className="font-display font-bold text-sm text-[#17170F]">Group Cancellation Vote (Flow 5b)</p>
-          <p className="text-xs text-[#595B52] mt-0.5">
-            Proposed by <strong>{requester?.name ?? "a member"}</strong> · {formatDate(request.createdAt)}
-          </p>
-          {request.reason && (
-            <p className="text-xs text-gray-600 mt-1.5 italic leading-snug">"{request.reason}"</p>
-          )}
-        </div>
-      </div>
-
-      {/* Quorum Progress: Live Voting Count */}
-      <div className="rounded-xl bg-white border border-[#E9E8E0] p-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-bold text-[#595B52] uppercase tracking-wider">Quorum Status</p>
-          <p className={cn(
-            "text-xs font-extrabold",
-            quorum.met ? "text-brand-600" : "text-coral-500"
-          )}>
-            {quorum.met ? "✓ Quorum Reached · Proportional Refunds Dispatched" : `${quorum.approvals} of ${quorum.required} agreed`}
-          </p>
-        </div>
-
-        <div className="flex gap-1.5 mb-3">
-          {Array.from({ length: quorum.memberCount }).map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex-1 h-2.5 rounded-full transition-colors",
-                i < quorum.approvals ? "bg-brand-500" : "bg-gray-200"
-              )}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center gap-4 text-xs text-[#595B52]">
-          <span className="flex items-center gap-1 font-semibold">
-            <ThumbsUp className="h-3.5 w-3.5 text-brand-500" />
-            {quorum.approvals} approved
-          </span>
-          <span className="flex items-center gap-1">
-            <ThumbsDown className="h-3.5 w-3.5 text-coral-400" />
-            {quorum.rejections} rejected
-          </span>
-          <span className="ml-auto text-gray-400 text-[11px]">
-            {quorum.pending} pending
-          </span>
-        </div>
-      </div>
-
-      {/* Vote controls if quorum not met yet */}
-      {!quorum.met && (
-        <div className="bg-white border border-[#E9E8E0] rounded-xl p-3.5 space-y-2">
-          <p className="text-xs text-gray-600 font-semibold">Cast live vote as {voterName || "Admin"}:</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              id="vote-approve-btn"
-              type="button"
-              onClick={() => onVote(true, voterId || request.requestedBy)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-brand-500 text-[#17170F] py-2.5 text-xs font-bold hover:bg-brand-400 transition-colors"
-            >
-              <ThumbsUp className="h-3.5 w-3.5" />
-              Approve
-            </button>
-            <button
-              id="vote-reject-btn"
-              type="button"
-              onClick={() => onVote(false, voterId || request.requestedBy)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-coral-300 bg-coral-50 text-coral-600 py-2.5 text-xs font-bold hover:bg-coral-100 transition-colors"
-            >
-              <ThumbsDown className="h-3.5 w-3.5" />
-              Reject
-            </button>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
-
-      {/* Refund breakdown (Revealed ONLY after quorum is reached!) */}
-      {quorum.met ? (
-        <div className="pt-2">
-          <p className="text-xs font-bold text-[#595B52] uppercase tracking-wider mb-3">
-            Proportional Refund Breakdown · Pool = {formatNaira(pool)}
-          </p>
-          <ul className="space-y-2 bg-white rounded-xl p-3.5 border border-[#E9E8E0]">
-            {refunds.map((r) => (
-              <li key={r.userId} className="flex items-center gap-3 py-1">
-                <Avatar name={r.name} color={r.avatarColor} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-[#17170F]">{r.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="flex-1 h-1 rounded-full bg-gray-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-coral-400"
-                        style={{ width: `${r.sharePct}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-gray-400 tabular shrink-0">{r.sharePct.toFixed(0)}%</span>
-                  </div>
-                </div>
-                <p className="text-xs font-bold tabular text-coral-600 shrink-0">
-                  {formatNaira(r.refund)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <p className="text-[11px] text-gray-500 italic">
-          🔒 Funds remain safely locked. Proportional refund breakdown will be calculated and disbursed once majority quorum is reached.
-        </p>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-

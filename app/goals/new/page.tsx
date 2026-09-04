@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Calendar,
   Sparkles,
   Users,
   User,
@@ -17,13 +16,12 @@ import {
   ArrowRight,
   Bell,
   ChevronDown,
-  Info,
-  Laptop,
-  Check,
+  Menu,
+  X,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
-import { installmentBreakdown } from "@/lib/calculator";
-import { formatNaira, daysLeft } from "@/lib/utils";
+import { installmentBreakdown, FREQUENCY_LABEL } from "@/lib/calculator";
+import { daysLeft } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Frequency, GoalType } from "@/lib/types";
 import { useAuth } from "@/app/context/AuthContext";
@@ -43,26 +41,31 @@ export default function NewGoalPage() {
     }
   }, [user, authLoading, router]);
 
-  // Form State
-  const [title, setTitle] = useState("MacBook Air");
-  const [amount, setAmount] = useState("480,000");
-  const [deadline, setDeadline] = useState("2026-12-12");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Form State — starts completely clean with no hardcoded pre-filled template data
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [goalType, setGoalType] = useState<GoalType>("individual");
   const [frequency, setFrequency] = useState<Frequency>("daily");
-  const [emoji, setEmoji] = useState("💻");
+  const [emoji, setEmoji] = useState("🎯");
 
   // AI Prompt State
-  const [aiPrompt, setAiPrompt] = useState("I want to save for a MacBook Air by December...");
+  const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuccess, setAiSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [retailerMatches, setRetailerMatches] = useState<any[]>([]);
   const [appliedRetailerId, setAppliedRetailerId] = useState<string | null>(null);
 
   // Installment calculations
   const [breakdown, setBreakdown] = useState<Record<Frequency, number>>({
-    daily: 7077,
-    weekly: 49539,
-    monthly: 214285,
+    daily: 0,
+    weekly: 0,
+    monthly: 0,
+    yearly: 0,
   });
 
   const amountNum = parseFloat(amount.replace(/,/g, "")) || 0;
@@ -70,12 +73,31 @@ export default function NewGoalPage() {
   useEffect(() => {
     if (amountNum > 0 && deadline) {
       setBreakdown(installmentBreakdown({ target: amountNum, deadline }));
+    } else {
+      setBreakdown({ daily: 0, weekly: 0, monthly: 0, yearly: 0 });
     }
   }, [amountNum, deadline]);
 
-  const days = deadline ? daysLeft(deadline) : 365;
-  const weeks = Math.max(1, Math.ceil(days / 7));
-  const months = Math.max(1, Math.round(days / 30));
+  const daysToDeadline = deadline ? daysLeft(deadline) : 0;
+  const isYearlyDisabled = daysToDeadline > 0 && daysToDeadline < 365;
+  const isMonthlyDisabled = daysToDeadline > 0 && daysToDeadline < 30;
+  const isWeeklyDisabled = daysToDeadline > 0 && daysToDeadline < 7;
+
+  // Auto-adjust frequency if chosen frequency exceeds the deadline range
+  useEffect(() => {
+    if (deadline && daysToDeadline > 0) {
+      if (frequency === "yearly" && isYearlyDisabled) {
+        setFrequency(daysToDeadline >= 30 ? "monthly" : daysToDeadline >= 7 ? "weekly" : "daily");
+      } else if (frequency === "monthly" && isMonthlyDisabled) {
+        setFrequency(daysToDeadline >= 7 ? "weekly" : "daily");
+      } else if (frequency === "weekly" && isWeeklyDisabled) {
+        setFrequency("daily");
+      }
+    }
+  }, [deadline, daysToDeadline, frequency, isYearlyDisabled, isMonthlyDisabled, isWeeklyDisabled]);
+
+  const weeks = Math.max(1, Math.ceil((daysToDeadline || 365) / 7));
+  const months = Math.max(1, Math.round((daysToDeadline || 365) / 30));
 
   function handleAmountChange(raw: string) {
     const digits = raw.replace(/[^\d]/g, "");
@@ -90,12 +112,14 @@ export default function NewGoalPage() {
     setAppliedRetailerId(opt.id);
   }
 
-  // Handle AI Parse & Populate
+  // Handle AI Parse & Auto-populate Form
   async function handleAiLookup(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!aiPrompt.trim()) return;
 
     setAiLoading(true);
+    setAiError(null);
+    setAiSuccess(false);
     try {
       const res = await fetch("/api/ai/parse-goal", {
         method: "POST",
@@ -103,20 +127,32 @@ export default function NewGoalPage() {
         body: JSON.stringify({ prompt: aiPrompt }),
       });
       const data = await res.json();
+
+      if (data.error) {
+        setAiError(data.error);
+        return;
+      }
+
       if (data.success && data.parsed) {
         if (data.parsed.itemTitle) setTitle(data.parsed.itemTitle);
         if (data.parsed.deadline) setDeadline(data.parsed.deadline);
         if (data.parsed.emoji) setEmoji(data.parsed.emoji);
+
         if (data.retailerMatches && data.retailerMatches.length > 0) {
           setRetailerMatches(data.retailerMatches);
           const topMatch = data.retailerMatches[0];
           setAmount(topMatch.price.toLocaleString("en-NG"));
           if (topMatch.emoji) setEmoji(topMatch.emoji);
           setAppliedRetailerId(topMatch.id);
+        } else {
+          setRetailerMatches([]);
+          setAppliedRetailerId(null);
         }
+        setAiSuccess(true);
       }
     } catch (err) {
       console.error(err);
+      setAiError("Could not reach the AI assistant. Please fill in the details manually.");
     } finally {
       setAiLoading(false);
     }
@@ -199,21 +235,50 @@ export default function NewGoalPage() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-center gap-2 sm:gap-3.5">
             <button
               type="button"
-              className="p-1.5 text-gray-500 hover:text-[#17170F] transition-colors rounded-full hover:bg-gray-100"
+              className="hidden sm:inline-flex p-1.5 text-gray-500 hover:text-[#17170F] transition-colors rounded-full hover:bg-gray-100"
             >
               <Bell className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-1.5 cursor-pointer pl-1">
+            <div className="hidden sm:flex items-center gap-1.5 cursor-pointer pl-1">
               <div className="w-8 h-8 rounded-full bg-[#E5E3D8] text-[#17170F] font-bold text-xs flex items-center justify-center border border-white shadow-2xs">
                 {userInitials}
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
             </div>
+            <button
+              type="button"
+              className="md:hidden rounded-xl border border-[#ECEAE0] bg-white p-2.5 text-[#17170F] hover:bg-[#F0EFEA] transition-colors"
+              aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((v) => !v)}
+            >
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {mobileNavOpen && (
+          <div className="md:hidden border-t border-[#ECEAE0] bg-[#FAF9F5] px-6 py-4 space-y-1">
+            {[
+              { href: "/dashboard", label: "Dashboard" },
+              { href: "/dashboard", label: "Goals" },
+              { href: "/dashboard", label: "Groups" },
+              { href: "/activity", label: "Activity" },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileNavOpen(false)}
+                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-[#4A4C42] hover:bg-white hover:text-[#17170F] transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* ── MAIN CONTAINER ────────────────────────────── */}
@@ -262,7 +327,7 @@ export default function NewGoalPage() {
                     What are you saving for?
                   </h2>
                   <p className="text-xs text-[#595B52] font-normal mt-0.5">
-                    Tell us what you want, when you need it, and we'll build the plan.
+                    Tell us what you want, when you need it, and we&apos;ll build the plan.
                   </p>
                 </div>
               </div>
@@ -271,43 +336,62 @@ export default function NewGoalPage() {
               <div className="relative">
                 <textarea
                   value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onChange={(e) => {
+                    setAiPrompt(e.target.value);
+                    setAiError(null);
+                    setAiSuccess(false);
+                  }}
                   maxLength={300}
                   rows={3}
-                  placeholder="I want to save for a MacBook Air by December..."
-                  className="w-full rounded-2xl border border-[#D5E6BC] bg-white p-4 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs resize-none"
+                  placeholder="e.g. I want an iPhone 14 before December, or a MacBook Air soon..."
+                  className={cn(
+                    "w-full rounded-2xl border bg-white p-4 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all shadow-2xs resize-none",
+                    aiError
+                      ? "border-red-300 focus:ring-red-300"
+                      : aiSuccess
+                      ? "border-[#8CC63F] focus:ring-[#8CC63F]"
+                      : "border-[#D5E6BC] focus:ring-[#8CC63F]"
+                  )}
                 />
                 <span className="absolute right-3.5 bottom-3 text-[10px] text-gray-400 font-medium">
                   {aiPrompt.length}/300
                 </span>
               </div>
 
+              {/* AI Error Banner */}
+              {aiError && (
+                <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-2.5 text-xs text-red-700">
+                  <span className="shrink-0 mt-0.5">⚠️</span>
+                  <span>{aiError}</span>
+                </div>
+              )}
+
+              {/* AI Success Banner */}
+              {aiSuccess && !aiError && (
+                <div className="flex items-center gap-2 rounded-xl bg-[#EBF5D7] border border-[#C4E09A] px-3.5 py-2 text-xs text-[#3b6e12] font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 fill-[#8CC63F] text-white" />
+                  <span>Plan auto-filled from your prompt — review and adjust below.</span>
+                </div>
+              )}
+
               {/* Tags and Action */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setAiPrompt("I want to save for a MacBook Air M2 256GB by December")}
+                    onClick={() => setAiPrompt("I want to save for an iPhone 14 before December")}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#D8ECC0] bg-white/80 hover:bg-white text-[11px] text-[#4A4C42] transition-colors"
                   >
                     <span>💡</span>
-                    <span>Be specific</span>
+                    <span>iPhone 14</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAiPrompt((prev) => prev + " by 12 December 2026")}
+                    onClick={() => setAiPrompt("Save for a MacBook Air M2 by 12 December 2026")}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#D8ECC0] bg-white/80 hover:bg-white text-[11px] text-[#4A4C42] transition-colors"
                   >
-                    <span>📅</span>
-                    <span>Include the deadline</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAiPrompt("Save ₦480,000 for Apple MacBook Air M2 Laptop")}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#D8ECC0] bg-white/80 hover:bg-white text-[11px] text-[#4A4C42] transition-colors"
-                  >
-                    <span>🏷️</span>
-                    <span>Add details</span>
+                    <span>💻</span>
+                    <span>MacBook Air</span>
                   </button>
                 </div>
 
@@ -320,7 +404,7 @@ export default function NewGoalPage() {
                   {aiLoading ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Finding best prices...</span>
+                      <span>Parsing intent...</span>
                     </>
                   ) : (
                     <>
@@ -331,7 +415,7 @@ export default function NewGoalPage() {
                 </button>
               </div>
 
-              {/* Verified Retailer Options (Surfaced 2-3 real options with price + link) */}
+              {/* Verified Retailer Options */}
               {retailerMatches.length > 0 && (
                 <div className="pt-3 border-t border-[#D8ECC0] space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -404,10 +488,10 @@ export default function NewGoalPage() {
             <div className="rounded-[24px] border border-[#ECEAE0] bg-white p-6 sm:p-7 shadow-2xs space-y-6">
               <div>
                 <h2 className="text-base font-bold text-[#17170F]">
-                  Prefer to set it up yourself?
+                  Manual Goal Details &amp; Frequency
                 </h2>
                 <p className="text-xs text-[#595B52] font-normal mt-0.5">
-                  No problem. You can enter the details manually.
+                  The AI pre-fills these fields based on your prompt, or you can enter them manually.
                 </p>
               </div>
 
@@ -422,8 +506,8 @@ export default function NewGoalPage() {
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="e.g. iPhone 16, School Fees, Department Projector..."
-                      className="w-full rounded-xl border border-[#E2DFD2] bg-white px-3.5 py-3 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
+                      placeholder="e.g. iPhone 14, MacBook Air, School Fees..."
+                      className="w-full rounded-xl border border-[#E2DFD2] bg-white px-3.5 py-3 text-sm text-[#17170F] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs font-medium"
                     />
                   </div>
                 </div>
@@ -457,7 +541,7 @@ export default function NewGoalPage() {
                       type="date"
                       value={deadline}
                       onChange={(e) => setDeadline(e.target.value)}
-                      className="w-full rounded-xl border border-[#E2DFD2] bg-white px-3.5 py-3 text-sm text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs"
+                      className="w-full rounded-xl border border-[#E2DFD2] bg-white px-3.5 py-3 text-sm text-[#17170F] focus:outline-none focus:ring-2 focus:ring-[#8CC63F] focus:border-transparent transition-all shadow-2xs font-medium"
                     />
                   </div>
                 </div>
@@ -465,7 +549,7 @@ export default function NewGoalPage() {
                 {/* Saving As (Individual vs Group) */}
                 <div>
                   <label className="block text-xs font-bold text-[#17170F] mb-1.5">
-                    I'm saving as
+                    I&apos;m saving as
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -498,6 +582,76 @@ export default function NewGoalPage() {
                 </div>
               </div>
 
+              {/* ── SAVINGS FREQUENCY SELECTOR (Daily, Weekly, Monthly, Yearly) ── */}
+              <div className="pt-2 border-t border-[#ECEAE0] space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-[#17170F]">
+                    Savings Frequency
+                  </label>
+                  {deadline && (
+                    <span className="text-[11px] text-[#595B52] font-medium">
+                      Deadline in {daysToDeadline} days
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { key: "daily" as Frequency, label: "Daily", disabled: false },
+                    {
+                      key: "weekly" as Frequency,
+                      label: "Weekly",
+                      disabled: isWeeklyDisabled,
+                      tooltip: "Requires at least 7 days deadline",
+                    },
+                    {
+                      key: "monthly" as Frequency,
+                      label: "Monthly",
+                      disabled: isMonthlyDisabled,
+                      tooltip: "Requires at least 30 days deadline",
+                    },
+                    {
+                      key: "yearly" as Frequency,
+                      label: "Yearly",
+                      disabled: isYearlyDisabled,
+                      tooltip: "Requires at least 365 days deadline",
+                    },
+                  ].map((f) => (
+                    <button
+                      key={f.key}
+                      type="button"
+                      disabled={f.disabled}
+                      onClick={() => setFrequency(f.key)}
+                      title={f.disabled ? f.tooltip : undefined}
+                      className={cn(
+                        "py-2.5 px-3 rounded-xl text-xs font-bold transition-all relative flex flex-col items-center justify-center gap-0.5",
+                        frequency === f.key
+                          ? "border-2 border-[#8CC63F] bg-[#F4F9EB] text-[#17170F] shadow-2xs"
+                          : f.disabled
+                          ? "border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-50"
+                          : "border border-[#E2DFD2] bg-white text-gray-700 hover:bg-gray-50"
+                      )}
+                    >
+                      <span>{f.label}</span>
+                      {f.disabled && (
+                        <span className="text-[9px] font-normal text-gray-400">Short deadline</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {isYearlyDisabled && frequency === "yearly" && (
+                  <p className="text-[11px] text-amber-600 font-medium">
+                    ⚠️ Yearly saving is disabled because your deadline is less than 1 year (365 days) away.
+                  </p>
+                )}
+                {isMonthlyDisabled && frequency === "monthly" && (
+                  <p className="text-[11px] text-amber-600 font-medium">
+                    ⚠️ Monthly saving is disabled because your deadline is less than 30 days away.
+                  </p>
+                )}
+              </div>
+
               {/* Action Button */}
               <div className="flex justify-end pt-2">
                 <button
@@ -523,33 +677,21 @@ export default function NewGoalPage() {
                 </h2>
                 <p className="text-xs text-[#427418] font-semibold flex items-center gap-1.5 mt-1">
                   <CheckCircle2 className="w-3.5 h-3.5 fill-[#8CC63F] text-white" />
-                  <span>Great! We've built a plan for you.</span>
+                  <span>
+                    {title ? "Plan configured" : "Waiting for goal details"}
+                  </span>
                 </p>
               </div>
 
-              {/* Goal Snapshot Card */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECEAE0]">
-                {/* Visual Thumbnail */}
-                <div className="w-16 h-12 rounded-xl bg-white border border-[#E5E3D8] flex items-center justify-center p-1.5 shrink-0 shadow-2xs">
-                  {title.toLowerCase().includes("laptop") || title.toLowerCase().includes("macbook") ? (
-                    <svg viewBox="0 0 48 32" className="w-full h-full" fill="none">
-                      <rect x="6" y="2" width="36" height="23" rx="2.5" fill="#1C1E21" stroke="#A6ACB5" strokeWidth="1.5" />
-                      <rect x="8" y="4" width="32" height="19" rx="1" fill="#4B77BE" />
-                      <path d="M 12 18 Q 24 10, 36 15" stroke="#E26A6A" strokeWidth="3" fill="none" />
-                      <path d="M 2 26 L 46 26 L 43 28 L 5 28 Z" fill="#D3D7DC" stroke="#A6ACB5" strokeWidth="1" />
-                    </svg>
-                  ) : (
-                    <span className="text-2xl select-none">{emoji}</span>
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-xs text-[#17170F] truncate">{title || "Goal item"}</p>
-                  <p className="font-display font-extrabold text-xl text-[#17170F] tracking-tight mt-0.5">
+              {/* Goal Snapshot Card (NO thumbnail emoji box as requested) */}
+              <div className="p-4 rounded-2xl bg-[#FAF9F5] border border-[#ECEAE0]">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm text-[#17170F] truncate">{title || "Goal item name"}</p>
+                  <p className="font-display font-extrabold text-2xl text-[#17170F] tracking-tight mt-1">
                     ₦{amountNum > 0 ? amountNum.toLocaleString("en-NG") : "0"}
                   </p>
-                  <p className="text-[10px] text-gray-400">Target amount</p>
-                  <p className="text-[11px] text-[#595B52] font-medium flex items-center gap-1 mt-1">
+                  <p className="text-[10px] text-gray-400 mt-0.5">Target amount</p>
+                  <p className="text-[11px] text-[#595B52] font-medium flex items-center gap-1 mt-2">
                     <span>📅</span>
                     <span>
                       {deadline
@@ -558,31 +700,30 @@ export default function NewGoalPage() {
                             month: "short",
                             year: "numeric",
                           })
-                        : "12 Dec 2026"}
+                        : "No deadline set"}
                     </span>
                   </p>
                 </div>
               </div>
 
-              {/* Recommended Daily Savings */}
+              {/* Recommended Savings according to chosen frequency */}
               <div className="pt-1">
-                <p className="text-xs font-semibold text-[#595B52]">
-                  Recommended daily savings
+                <p className="text-xs font-semibold text-[#595B52] capitalize">
+                  Recommended {frequency} savings
                 </p>
                 <div className="flex items-baseline justify-between mt-1">
                   <div className="flex items-baseline gap-1">
                     <span className="font-display font-extrabold text-2xl text-[#8CC63F] tracking-tight">
-                      ₦{breakdown.daily > 0 ? breakdown.daily.toLocaleString("en-NG") : "7,077"}
+                      ₦{breakdown[frequency] > 0 ? breakdown[frequency].toLocaleString("en-NG") : "0"}
                     </span>
-                    <span className="text-xs text-gray-500 font-medium">/ day</span>
+                    <span className="text-xs text-gray-500 font-medium">/ {FREQUENCY_LABEL[frequency]}</span>
                   </div>
-                  <span className="rounded-full bg-[#EBF5D7] text-[#427418] text-[10px] font-bold px-2.5 py-1">
-                    {months} months left
-                  </span>
+                  {daysToDeadline > 0 && (
+                    <span className="rounded-full bg-[#EBF5D7] text-[#427418] text-[10px] font-bold px-2.5 py-1">
+                      {daysToDeadline} days left
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-[#595B52] font-medium mt-0.5">
-                  ₦{breakdown.weekly > 0 ? breakdown.weekly.toLocaleString("en-NG") : "49,539"} / week
-                </p>
               </div>
 
               {/* Plan Summary Table */}
@@ -592,7 +733,9 @@ export default function NewGoalPage() {
                 </p>
                 <div className="flex items-center justify-between text-[#595B52]">
                   <span>Target amount</span>
-                  <span className="font-bold text-[#17170F]">₦{amountNum.toLocaleString("en-NG")}</span>
+                  <span className="font-bold text-[#17170F]">
+                    ₦{amountNum > 0 ? amountNum.toLocaleString("en-NG") : "0"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-[#595B52]">
                   <span>Deadline</span>
@@ -603,22 +746,20 @@ export default function NewGoalPage() {
                           month: "short",
                           year: "numeric",
                         })
-                      : "12 Dec 2026"}
+                      : "Not set"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[#595B52]">
                   <span>Time to goal</span>
-                  <span className="font-bold text-[#17170F]">{days} days</span>
+                  <span className="font-bold text-[#17170F]">{daysToDeadline} days</span>
                 </div>
                 <div className="flex items-center justify-between text-[#595B52]">
                   <span>Total weeks</span>
                   <span className="font-bold text-[#17170F]">{weeks} weeks</span>
                 </div>
                 <div className="flex items-center justify-between text-[#595B52]">
-                  <span>Recommended weekly savings</span>
-                  <span className="font-bold text-[#17170F]">
-                    ₦{breakdown.weekly > 0 ? breakdown.weekly.toLocaleString("en-NG") : "49,539"}
-                  </span>
+                  <span>Frequency</span>
+                  <span className="font-bold text-[#17170F] capitalize">{frequency}</span>
                 </div>
               </div>
 
@@ -627,7 +768,7 @@ export default function NewGoalPage() {
                 <div className="flex items-center justify-between text-[10px] text-gray-500 font-bold mb-1">
                   <span>0%</span>
                   <span className="text-[#17170F]">₦0 saved</span>
-                  <span>₦{amountNum.toLocaleString("en-NG")}</span>
+                  <span>₦{amountNum > 0 ? amountNum.toLocaleString("en-NG") : "0"}</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
                   <div className="w-0 h-full bg-[#8CC63F] rounded-full" />
@@ -644,7 +785,7 @@ export default function NewGoalPage() {
                     You can adjust your plan anytime
                   </p>
                   <p className="text-[11px] text-[#595B52] leading-snug mt-0.5">
-                    Contributions are flexible. You're in control.
+                    Contributions are flexible. You&apos;re in control.
                   </p>
                 </div>
               </div>

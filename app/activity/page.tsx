@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { DashboardSidebar } from "@/app/components/DashboardSidebar";
+import { AppShell, MobileNavButton } from "@/app/components/DashboardSidebar";
 import { Avatar } from "@/app/components/Avatar";
 import { useAuth } from "@/app/context/AuthContext";
 import { formatNaira, formatDate } from "@/lib/utils";
@@ -60,14 +60,15 @@ export default function ActivityPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-cream font-sans">
-      <DashboardSidebar />
-
+    <AppShell>
       <main className="flex-1 p-6 max-w-5xl">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-ink">Activity &amp; Audit Log</h1>
-            <p className="text-sm text-muted">Complete transparent ledger of funds, votes, and events.</p>
+          <div className="flex items-start gap-3">
+            <MobileNavButton className="mt-0.5" />
+            <div>
+              <h1 className="font-display text-2xl font-bold text-ink">Activity &amp; Audit Log</h1>
+              <p className="text-sm text-muted">Complete transparent ledger of funds, votes, and events.</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -175,6 +176,6 @@ export default function ActivityPage() {
           </div>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }

@@ -6,7 +6,7 @@
  */
 
 export type GoalType = "individual" | "group";
-export type Frequency = "daily" | "weekly" | "monthly";
+export type Frequency = "daily" | "weekly" | "monthly" | "yearly";
 export type GoalStatus = "active" | "completed" | "withdrawn" | "cancelled";
 export type MemberRole = "admin" | "member";
 export type WithdrawalStatus = "pending" | "approved" | "rejected";
