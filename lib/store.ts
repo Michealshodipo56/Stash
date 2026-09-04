@@ -294,10 +294,11 @@ export function payoutsForUser(userId: string): Payout[] {
 
 /* — dashboard aggregates — */
 export function dashboardSummary(userId: string) {
-  const allGoals = listGoalsForUser(userId);
   const goals = listActiveGoalsForUser(userId);
+  const activeGoalIds = new Set(goals.map((g) => g.id));
+
   let totalSaved = 0;
-  for (const goal of allGoals) {
+  for (const goal of goals) {
     totalSaved +=
       goal.type === "individual" && goal.ownerId === userId
         ? goalSaved(goal.id)
@@ -307,7 +308,10 @@ export function dashboardSummary(userId: string) {
   const cutoff = Date.now() - 30 * 86_400_000;
   const thisMonth = db()
     .contributions.filter(
-      (x) => x.contributorUserId === userId && new Date(x.receivedAt).getTime() >= cutoff,
+      (x) =>
+        activeGoalIds.has(x.goalId) &&
+        x.contributorUserId === userId &&
+        new Date(x.receivedAt).getTime() >= cutoff,
     )
     .reduce((s, x) => s + x.amount, 0);
 
@@ -318,6 +322,7 @@ export function dashboardSummary(userId: string) {
     groupContribs.map((x) => x.contributorUserId ?? x.contributorName),
   ).size;
 
+  // Lifetime payouts received (already settled to bank)
   const payoutsReceived = payoutsForUser(userId).reduce((s, p) => s + p.amount, 0);
 
   return {

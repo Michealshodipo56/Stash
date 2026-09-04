@@ -45,6 +45,19 @@
       "bankName": "OPay Digital Services (PayCom)",
       "avatarColor": "#8cc63f",
       "createdAt": "2026-09-04T09:09:40.646Z"
+    },
+    {
+      "id": "u_mtmzb1rx_065007",
+      "name": "micheal femi",
+      "phone": "00000000000",
+      "email": "mail@email.com",
+      "passwordHash": "cda8f08a10b26baac59de0bcfd09fd0e:f25c44a0f50e8037dcf5edefacc74a32570c829f42ac48400c6221adb7ac5ed182579da1f65582947dcd9135550c75d6e404cabfa9e7e7f0210545b818ec0618",
+      "bmoniError": "BMONI Sandbox Error (400): Validation failed",
+      "kycStatus": "active",
+      "bankAccountNumber": "0000000000",
+      "bankName": "OPay Digital Services (PayCom)",
+      "avatarColor": "#8cc63f",
+      "createdAt": "2026-09-04T13:17:36.794Z"
     }
   ],
   "sessions": [
@@ -70,11 +83,109 @@
       "expiresAt": "2026-09-11T09:01:22.036Z"
     },
     {
-      "id": "sess_mtmxa7bh_0cb85d15",
-      "token": "7d4f8e0e2810dc700868c39c58af488ff9e83a5deee2fd0e0f0495b3edb97cb5",
+      "id": "sess_mtmzj4rc_76e0b80f",
+      "token": "4d4ee7117debcdb5cde9c2ea97475151b8b978b4db9b2c2a610a56abab8261ea",
       "userId": "u_mtmqg365_ba62dd",
-      "createdAt": "2026-09-04T12:20:57.102Z",
-      "expiresAt": "2026-09-11T12:20:57.101Z"
+      "createdAt": "2026-09-04T13:23:52.920Z",
+      "expiresAt": "2026-09-11T13:23:52.920Z"
+    },
+    {
+      "id": "sess_mtmzj7q8_a4660470",
+      "token": "7a740018d2a206cf79eedde74e163126c8424c5db28d7ed08768859a5bf47d49",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:23:56.768Z",
+      "expiresAt": "2026-09-11T13:23:56.768Z"
+    },
+    {
+      "id": "sess_mtmzj93s_c5bf46c5",
+      "token": "d481c40360784e7b28f58b2987e5920ca954b30ab9b8d0f2b70b5705c32f4ff2",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:23:58.553Z",
+      "expiresAt": "2026-09-11T13:23:58.552Z"
+    },
+    {
+      "id": "sess_mtmzjlji_cfcef32f",
+      "token": "c6778a0d2a1808af1db073c5e3530cdd0e1b5a8c74d5bb4a9bef6a13b48d0254",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:14.671Z",
+      "expiresAt": "2026-09-11T13:24:14.670Z"
+    },
+    {
+      "id": "sess_mtmzjmhh_0cad499e",
+      "token": "3c2893f65e82a72928bb501c97e542eb10e308bb22cf98d05fb225bd65d4bf04",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:15.894Z",
+      "expiresAt": "2026-09-11T13:24:15.893Z"
+    },
+    {
+      "id": "sess_mtmzjmo2_f86d3357",
+      "token": "25987441d34aa79762b0c50215cb6c129523298db186e083b5fc57cfebf7fd85",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:16.130Z",
+      "expiresAt": "2026-09-11T13:24:16.130Z"
+    },
+    {
+      "id": "sess_mtmzjmzk_ba063713",
+      "token": "bde4176cfcabd70b86c75a303eca3e97ea79ff5fe573424387559e6d52f49f1f",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:16.544Z",
+      "expiresAt": "2026-09-11T13:24:16.544Z"
+    },
+    {
+      "id": "sess_mtmzjn4c_aa5692a7",
+      "token": "28be5dd4eb0c1ec100ac45dd8c73e862cb1baa38b1731596b1946431724ed6b7",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:16.717Z",
+      "expiresAt": "2026-09-11T13:24:16.716Z"
+    },
+    {
+      "id": "sess_mtmzjn94_1b2417a8",
+      "token": "baf8aebca44e3ba4d08b68e844b979c557331bd4eadcbef5855e2a851f03f483",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:16.889Z",
+      "expiresAt": "2026-09-11T13:24:16.888Z"
+    },
+    {
+      "id": "sess_mtmzjnev_5f74a563",
+      "token": "e8da52b4be3a2db7538a549a955c8293496971b627f1df956159b5f9810bcb9c",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:17.095Z",
+      "expiresAt": "2026-09-11T13:24:17.095Z"
+    },
+    {
+      "id": "sess_mtmzjnj2_73c7b596",
+      "token": "0b44f5859c2bc8c5561e10816d8a4e104ec0fcede2e07141e6772c27ccc08633",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:17.246Z",
+      "expiresAt": "2026-09-11T13:24:17.246Z"
+    },
+    {
+      "id": "sess_mtmzjnoa_e3d1c65b",
+      "token": "768da078718882e1ba070b1a862dc4a714e9f003946d64bea211a640cf80ca6e",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:17.437Z",
+      "expiresAt": "2026-09-11T13:24:17.434Z"
+    },
+    {
+      "id": "sess_mtmzjnsv_beb843d3",
+      "token": "572b71f76f578aafc9b94e051c8a5a27e728db089dfaee2903626191ed385741",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:17.599Z",
+      "expiresAt": "2026-09-11T13:24:17.599Z"
+    },
+    {
+      "id": "sess_mtmzjnxn_8ec28cbe",
+      "token": "bfa0fe4ee49b831fe892c7243e484a1d258367935e256203145063bb0ba658ec",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:24:17.771Z",
+      "expiresAt": "2026-09-11T13:24:17.771Z"
+    },
+    {
+      "id": "sess_mtmzlbyr_4db776af",
+      "token": "8e900ea580a7ca93c371b956379238a02a1a13bb4dcf4524e87146e8bb4d52ff",
+      "userId": "u_mtmqg365_ba62dd",
+      "createdAt": "2026-09-04T13:25:35.572Z",
+      "expiresAt": "2026-09-11T13:25:35.571Z"
     }
   ],
   "goals": [
@@ -119,9 +230,24 @@
       "ownerId": "u_mtmqg365_ba62dd",
       "virtualAccountNumber": "9910001989",
       "virtualAccountBank": "Providus Bank",
-      "status": "active",
+      "status": "completed",
       "emoji": "📱",
       "createdAt": "2026-09-04T12:24:18.081Z"
+    },
+    {
+      "id": "g_rt4kz",
+      "title": "Rent fees",
+      "type": "group",
+      "targetAmount": 250000,
+      "deadline": "2027-01-18",
+      "frequency": "monthly",
+      "installmentAmount": 50000,
+      "ownerId": "u_mtmqg365_ba62dd",
+      "virtualAccountNumber": "9910001555",
+      "virtualAccountBank": "Providus Bank",
+      "status": "active",
+      "emoji": "🎯",
+      "createdAt": "2026-09-04T13:10:39.539Z"
     }
   ],
   "members": [
@@ -131,6 +257,13 @@
       "userId": "u_mtmqg365_ba62dd",
       "role": "admin",
       "joinedAt": "2026-09-04T10:08:20.725Z"
+    },
+    {
+      "id": "gm_ru4kz",
+      "goalId": "g_rt4kz",
+      "userId": "u_mtmqg365_ba62dd",
+      "role": "admin",
+      "joinedAt": "2026-09-04T13:10:39.539Z"
     }
   ],
   "contributions": [
