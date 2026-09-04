@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Lock, CheckCircle2, Eye, EyeOff, ShieldCheck, Zap, AlertCircle, AlertTriangle } from "lucide-react";
+import { ArrowRight, Lock, CheckCircle2, Eye, EyeOff, ShieldCheck, AlertCircle, AlertTriangle } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -12,7 +12,7 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect") || "/dashboard";
 
-  const { signup, loginAsDemo } = useAuth();
+  const { signup } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,18 +58,6 @@ function SignupForm() {
 
     // Immediately forward to KYC onboarding
     router.push(`/onboarding?redirect=${encodeURIComponent(redirectPath)}`);
-  }
-
-  async function handleDemoAccess() {
-    setLoading(true);
-    setErrorMessage(null);
-    const res = await loginAsDemo();
-    setLoading(false);
-    if (res.success) {
-      router.push(redirectPath);
-    } else {
-      setErrorMessage(res.error || "Demo login failed");
-    }
   }
 
   return (
@@ -256,20 +244,6 @@ function SignupForm() {
               >
                 Log in
               </Link>
-            </div>
-
-            {/* Demo Fast Access Option */}
-            <div className="pt-2 border-t border-[#ECEAE0]/60 flex items-center justify-between text-[11px] text-[#595B52]">
-              <span>Testing the app?</span>
-              <button
-                type="button"
-                onClick={handleDemoAccess}
-                disabled={loading}
-                className="inline-flex items-center gap-1 font-bold text-[#17170F] hover:text-[#8CC63F] transition-colors"
-              >
-                <Zap className="w-3.5 h-3.5 text-[#8CC63F] fill-[#8CC63F]" />
-                <span>Instant Demo Login</span>
-              </button>
             </div>
           </div>
         </div>

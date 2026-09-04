@@ -136,6 +136,26 @@ export default function PublicFundGoalPage({
     );
   }
 
+  if (goal.type === "group") {
+    return (
+      <div className="min-h-screen bg-cream flex flex-col items-center justify-center p-4">
+        <div className="bg-surface rounded-2xl border border-line p-8 max-w-md text-center space-y-4">
+          <div className="text-3xl">👥</div>
+          <h2 className="text-xl font-bold text-ink">Members-only group goal</h2>
+          <p className="text-sm text-muted">
+            This goal doesn&apos;t have a public funding link. Only invited members can contribute.
+          </p>
+          <Link
+            href={`/goals/${id}`}
+            className="inline-block rounded-full bg-ink text-cream px-6 py-2.5 text-sm font-semibold hover:bg-ink-hover transition-colors"
+          >
+            Open goal
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const progress = Math.min(
     100,
     Math.round((goal.currentAmount / goal.targetAmount) * 100)

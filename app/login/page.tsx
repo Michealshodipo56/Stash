@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Lock, Eye, EyeOff, ShieldCheck, Zap, AlertCircle } from "lucide-react";
+import { ArrowRight, Lock, Eye, EyeOff, ShieldCheck, AlertCircle } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { useAuth } from "@/app/context/AuthContext";
 
@@ -12,7 +12,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect") || "/dashboard";
 
-  const { login, loginAsDemo } = useAuth();
+  const { login } = useAuth();
 
   const [phoneOrEmail, setPhoneOrEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,44 +37,26 @@ function LoginForm() {
     }
   }
 
-  async function handleDemoLogin() {
-    setLoading(true);
-    setErrorMessage(null);
-    const res = await loginAsDemo();
-    setLoading(false);
-    if (res.success) {
-      router.push(redirectPath);
-    } else {
-      setErrorMessage(res.error || "Demo login failed");
-    }
-  }
-
   return (
     <div className="min-h-screen bg-[#F7F6F1] text-[#17170F] font-sans flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 selection:bg-[#d0e8a4] selection:text-[#17170F]">
-      {/* ── MAIN CARD CONTAINER ────────────────────────── */}
       <div className="mx-auto w-full max-w-5xl bg-white rounded-[28px] sm:rounded-[36px] border border-[#ECEAE0] shadow-xl shadow-black/[0.03] overflow-hidden">
         <div className="grid md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[#ECEAE0]">
-          {/* ── LEFT COLUMN (Branding, Headline, Illustration, Trust Badge) ── */}
           <div className="md:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-between bg-white relative">
             <div>
-              {/* Logo */}
               <Link href="/" className="inline-block mb-6">
                 <Logo className="text-2xl tracking-tight" />
               </Link>
 
-              {/* Headline */}
               <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-[#17170F] leading-[1.1] tracking-tight">
                 Welcome back to<br />
                 <span className="text-[#8CC63F]">Aidex</span>
               </h1>
 
-              {/* Subtitle */}
               <p className="mt-3 text-sm text-[#595B52] leading-relaxed max-w-sm font-normal">
                 Access your savings goals, track contributions, and manage group payouts.
               </p>
             </div>
 
-            {/* Illustration with green sun doodle */}
             <div className="relative my-6 sm:my-8 flex flex-col items-center justify-center">
               <div aria-hidden="true" className="text-[#8CC63F] mb-1">
                 <svg viewBox="0 0 36 36" className="w-9 h-9" fill="none">
@@ -93,7 +75,6 @@ function LoginForm() {
               />
             </div>
 
-            {/* Bottom Trust Badge Card */}
             <div className="rounded-2xl bg-[#FBF9F4] border border-[#ECEAE0] p-4 flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-full border-2 border-[#8CC63F]/40 bg-[#EEF8DA] flex items-center justify-center shrink-0 text-[#67A422]">
                 <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
@@ -109,39 +90,12 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN (Demo Access Box, Credentials Form, Signup Link) ── */}
-          <div className="md:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-between bg-[#FCFBF8] md:bg-white space-y-6">
-            {/* Quick Demo Access Box */}
-            <div className="rounded-2xl border-2 border-dashed border-[#8CC63F]/50 bg-[#F4F9EB] p-4 sm:p-5 text-center space-y-2">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#17170F]">
-                <Zap className="h-4 w-4 text-[#8CC63F] fill-[#8CC63F]" />
-                <span>Fast Testing / Demo Access</span>
-              </div>
-              <p className="text-[11px] text-[#595B52] font-normal">
-                Log in instantly as a pre-verified user (Tolu Adeyemi, Tier-1 KYC with GTBank linked).
-              </p>
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                disabled={loading}
-                className="w-full mt-1 py-2.5 px-4 rounded-xl bg-[#8CC63F] hover:bg-[#7db835] text-[#17170F] text-xs font-bold transition-all shadow-xs disabled:opacity-40"
-              >
-                ⚡ Instant Demo Login
-              </button>
+          <div className="md:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-center bg-[#FCFBF8] md:bg-white space-y-6">
+            <div>
+              <h2 className="font-display text-xl font-bold text-[#17170F]">Log in</h2>
+              <p className="text-sm text-[#595B52] mt-1">Enter your phone or email and password to continue.</p>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#ECEAE0]" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#FCFBF8] md:bg-white px-3 text-[#7A7C73] font-semibold text-[10px] tracking-wider">
-                  Or with credentials
-                </span>
-              </div>
-            </div>
-
-            {/* Error banner */}
             {errorMessage && (
               <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 flex items-start gap-2.5 text-xs text-red-700">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -149,7 +103,6 @@ function LoginForm() {
               </div>
             )}
 
-            {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#17170F] mb-1.5">
@@ -205,7 +158,6 @@ function LoginForm() {
               </div>
             </form>
 
-            {/* Bottom Link */}
             <div className="text-center text-xs text-[#595B52]">
               Don&apos;t have an account?{" "}
               <Link
@@ -219,7 +171,6 @@ function LoginForm() {
         </div>
       </div>
 
-      {/* ── FOOTER RAIL NOTE ───────────────────────────── */}
       <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[#7A7C73]">
         <Lock className="h-3.5 w-3.5 text-[#8CC63F]" />
         <span>Self-custodied savings rails powered by BMONI</span>

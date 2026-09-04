@@ -12,7 +12,7 @@ import { ProgressBar } from "@/app/components/ProgressBar";
 import { Avatar } from "@/app/components/Avatar";
 import { AppShell, MobileNavButton } from "@/app/components/DashboardSidebar";
 import {
-  listGoalsForUser, dashboardSummary, goalSaved,
+  listActiveGoalsForUser, dashboardSummary, goalSaved,
   activeWithdrawal, recentActivity, getStreak, usersMap,
 } from "@/lib/store";
 import { formatNaira, pct, daysLeft, formatDate } from "@/lib/utils";
@@ -79,7 +79,7 @@ export default function DashboardPage() {
   }, [user, authLoading, router]);
 
   const userId = user?.id || "";
-  const goals = dashboardData ? dashboardData.goals : (userId ? listGoalsForUser(userId) : []);
+  const goals = dashboardData ? dashboardData.goals : (userId ? listActiveGoalsForUser(userId) : []);
   const summary = dashboardData ? dashboardData.summary : (userId ? dashboardSummary(userId) : {
     totalSaved: 0,
     goalCount: 0,

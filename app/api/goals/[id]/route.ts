@@ -30,7 +30,17 @@ export async function GET(
 
     const contributions = goalContributions(id);
     const totalContributed = contributions.reduce((sum, c) => sum + c.amount, 0);
-    const members = goalMembers(id);
+    const members = goalMembers(id).map((m) => {
+      const u = getUser(m.userId);
+      return {
+        ...m,
+        name: u?.name || "Member",
+        avatarColor: u?.avatarColor || "#5FA618",
+        contributed: contributions
+          .filter((c) => c.contributorUserId === m.userId)
+          .reduce((s, c) => s + c.amount, 0),
+      };
+    });
     const owner = getUser(goal.ownerId);
     const withdrawalReq = activeWithdrawal(id);
     const votes = withdrawalReq ? votesFor(withdrawalReq.id) : [];

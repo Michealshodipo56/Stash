@@ -38,7 +38,6 @@ import {
 import { Logo } from "@/app/components/Logo";
 import { Avatar } from "@/app/components/Avatar";
 import { useAuth } from "@/app/context/AuthContext";
-import { getUser, usersMap } from "@/lib/store";
 import { formatNaira, formatDate, pct, daysLeft, cn } from "@/lib/utils";
 import { Frequency } from "@/lib/types";
 
@@ -233,7 +232,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
       if (data.success) {
         triggerToast("Goal successfully closed & funds processed!");
         setShowCloseModal(false);
-        refresh();
+        router.push("/dashboard");
       }
     } catch (err) {
       console.error(err);
@@ -461,13 +460,15 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
                   <Plus className="w-4 h-4" />
                   Add money
                 </button>
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="flex-1 py-3 px-4 rounded-2xl border border-[#DCDBCF] bg-white text-[#17170F] font-bold text-xs hover:bg-gray-50 transition flex items-center justify-center gap-2"
-                >
-                  <Share2 className="w-4 h-4 text-gray-600" />
-                  Share goal
-                </button>
+                {!isGroup && (
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="flex-1 py-3 px-4 rounded-2xl border border-[#DCDBCF] bg-white text-[#17170F] font-bold text-xs hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                  >
+                    <Share2 className="w-4 h-4 text-gray-600" />
+                    Share goal
+                  </button>
+                )}
               </div>
             </div>
 
@@ -534,20 +535,19 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             </div>
 
-            {/* GROUP MEMBERS SECTION */}
+            {/* GROUP MEMBERS — group goals only */}
+            {isGroup && (
             <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-[#17170F] flex items-center gap-2">
                     Group members
                     <span className="text-xs font-semibold text-[#73756C] bg-gray-100 px-2 py-0.5 rounded-full">
-                      {members.length > 0 ? members.length : 1}
+                      {members.length}
                     </span>
                   </h2>
                   <p className="text-xs text-[#73756C] mt-0.5">
-                    {isGroup
-                      ? "Members contributing to this shared goal"
-                      : "Add members to invite friends & split installment targets"}
+                    Members contributing to this shared goal
                   </p>
                 </div>
                 <button
@@ -559,37 +559,32 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
                 </button>
               </div>
 
-              {/* Members List */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 {members.length > 0 ? (
                   members.map((m: any) => {
-                    const memberUser = usersMap[m.userId] || {
-                      name: m.name || "Goal Member",
-                      avatarColor: "#5FA618",
-                    };
                     const isOwnerMember = m.userId === goal.ownerId || m.role === "admin";
                     return (
                       <div
                         key={m.id || m.userId}
                         className="flex items-center justify-between p-3 rounded-2xl bg-[#FBF9F4] border border-[#E9E8E0]"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <Avatar
-                            name={memberUser.name}
-                            color={memberUser.avatarColor || "#5FA618"}
+                            name={m.name || "Member"}
+                            color={m.avatarColor || "#5FA618"}
                             size="md"
                           />
-                          <div>
-                            <p className="text-xs font-bold text-[#17170F] flex items-center gap-1.5">
-                              {memberUser.name}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-[#17170F] flex items-center gap-1.5 truncate">
+                              {m.name || "Member"}
                               {isOwnerMember && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E2EED3] text-[#3B6A0E]">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E2EED3] text-[#3B6A0E] shrink-0">
                                   Admin
                                 </span>
                               )}
                             </p>
                             <p className="text-[11px] text-[#73756C]">
-                              {isGroup ? `₦${Number(goal.installmentAmount).toLocaleString()} / ${goal.frequency}` : "Active contributor"}
+                              Contributed {formatNaira(m.contributed || 0)}
                             </p>
                           </div>
                         </div>
@@ -597,29 +592,14 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
                     );
                   })
                 ) : (
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-[#FBF9F4] border border-[#E9E8E0] col-span-full">
-                    <div className="flex items-center gap-3">
-                      <Avatar
-                        name={owner?.name || user?.name || "Tolu Adeyemi"}
-                        color={owner?.avatarColor || user?.avatarColor || "#5FA618"}
-                        size="md"
-                      />
-                      <div>
-                        <p className="text-xs font-bold text-[#17170F] flex items-center gap-1.5">
-                          {owner?.name || user?.name || "Tolu Adeyemi"}
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E2EED3] text-[#3B6A0E]">
-                            Owner & Admin
-                          </span>
-                        </p>
-                        <p className="text-[11px] text-[#73756C]">
-                          ₦{Number(goal.installmentAmount).toLocaleString()} / {goal.frequency}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="col-span-full text-center py-6 border border-dashed border-[#E0DFD5] rounded-2xl bg-[#FAF9F5]">
+                    <p className="text-xs font-bold text-[#17170F]">No members yet</p>
+                    <p className="text-[11px] text-[#73756C] mt-1">Add members to start saving together.</p>
                   </div>
                 )}
               </div>
             </div>
+            )}
 
             {/* LIVE ACTIVITY FEED */}
             <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
@@ -670,7 +650,8 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
           {/* Right Column (Sidebar Cards) */}
           <div className="space-y-6">
             
-            {/* FUND THIS GOAL CARD */}
+            {/* FUND THIS GOAL — individual goals only (public VA share) */}
+            {!isGroup && (
             <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-[#17170F]">Fund this goal</h2>
@@ -718,6 +699,48 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </button>
             </div>
+            )}
+
+            {/* Group sidebar: members snapshot */}
+            {isGroup && (
+            <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-[#17170F]">Members</h2>
+                <span className="text-xs font-semibold text-[#73756C] bg-gray-100 px-2 py-0.5 rounded-full">
+                  {members.length}
+                </span>
+              </div>
+              <p className="text-xs text-[#73756C] leading-relaxed">
+                Only invited members can contribute. There is no public funding link for group goals.
+              </p>
+              <div className="space-y-2">
+                {members.slice(0, 5).map((m: any) => (
+                  <div key={m.id || m.userId} className="flex items-center gap-2.5">
+                    <Avatar name={m.name || "Member"} color={m.avatarColor || "#5FA618"} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-[#17170F] truncate">{m.name || "Member"}</p>
+                      <p className="text-[10px] text-[#73756C]">{formatNaira(m.contributed || 0)} in</p>
+                    </div>
+                    {(m.userId === goal.ownerId || m.role === "admin") && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#E2EED3] text-[#3B6A0E]">Admin</span>
+                    )}
+                  </div>
+                ))}
+                {members.length > 5 && (
+                  <p className="text-[11px] text-[#73756C] font-medium pt-1">
+                    +{members.length - 5} more members
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAddMemberModal(true)}
+                className="w-full py-2.5 rounded-xl border border-[#E2EED3] bg-[#F3F8EC] text-[#3B6A0E] text-xs font-bold hover:bg-[#EAF4DB] transition flex items-center justify-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Invite member
+              </button>
+            </div>
+            )}
 
             {/* QUICK ACTIONS CARD */}
             <div className="bg-white rounded-3xl border border-[#E9E8E0] p-6 shadow-sm space-y-4">
@@ -1162,7 +1185,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
               </div>
 
               <p className="text-xs text-[#73756C]">
-                Invite a friend or partner to save towards this target. If this is a personal goal, adding a member automatically converts it into a shared Group Goal.
+                Invite a friend to join this group goal. Members can contribute from their accounts — there is no public funding link.
               </p>
 
               <form onSubmit={handleAddMember} className="space-y-4">

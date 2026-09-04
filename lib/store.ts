@@ -196,6 +196,13 @@ export function listGoalsForUser(userId: string): Goal[] {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
+/** Goals still in play on the dashboard (excludes closed / completed / cancelled). */
+export function listActiveGoalsForUser(userId: string): Goal[] {
+  return listGoalsForUser(userId).filter(
+    (g) => g.status === "active" || g.status === "paused",
+  );
+}
+
 export function goalContributions(goalId: string): Contribution[] {
   return db()
     .contributions.filter((x) => x.goalId === goalId)
@@ -287,9 +294,10 @@ export function payoutsForUser(userId: string): Payout[] {
 
 /* — dashboard aggregates — */
 export function dashboardSummary(userId: string) {
-  const goals = listGoalsForUser(userId);
+  const allGoals = listGoalsForUser(userId);
+  const goals = listActiveGoalsForUser(userId);
   let totalSaved = 0;
-  for (const goal of goals) {
+  for (const goal of allGoals) {
     totalSaved +=
       goal.type === "individual" && goal.ownerId === userId
         ? goalSaved(goal.id)

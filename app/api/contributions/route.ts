@@ -57,6 +57,13 @@ export async function POST(req: Request) {
     const effectiveUserId = contributorUserId || sessionUser?.id || undefined;
     const effectiveName = contributorName || sessionUser?.name || "Anonymous Contributor";
 
+    if (goal.type === "group" && !effectiveUserId) {
+      return NextResponse.json(
+        { error: "This is a group goal. Only invited members can contribute." },
+        { status: 403 }
+      );
+    }
+
     const contrib = await addContribution({
       goalId,
       contributorName: effectiveName,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentSessionUser } from "@/lib/auth";
 import {
   createGoal,
-  listGoalsForUser,
+  listActiveGoalsForUser,
   dashboardSummary,
   recentActivity,
   getStreak,
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const goals = listGoalsForUser(userId);
+    const goals = listActiveGoalsForUser(userId);
     const summary = dashboardSummary(userId);
     const activity = recentActivity(userId, 8);
     const streak = getStreak(userId);
