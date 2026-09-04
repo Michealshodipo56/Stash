@@ -942,9 +942,9 @@ export default function LandingPage() {
               <div className="px-8 sm:px-14 py-14 sm:py-16 flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
                 <div className="text-center md:text-left">
                   <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">
-                    We're building things{" "}
+                    Got something{" "}
                     <span className="relative inline-block text-[#8CC63F] italic font-serif">
-                      worth it.
+                      worth saving for?
                       {/* Underline scribble */}
                       <svg viewBox="0 0 120 12" className="absolute -bottom-2 left-0 w-full" fill="none">
                         <path d="M 2 8 Q 30 2, 60 7 T 118 4" stroke="#8CC63F" strokeWidth="2.5" strokeLinecap="round" />

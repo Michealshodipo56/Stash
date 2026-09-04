@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/activity",
   "/contributions",
   "/payouts",
+  "/transactions",
   "/onboarding",
 ];
 

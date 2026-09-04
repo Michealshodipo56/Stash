@@ -306,9 +306,8 @@ export default function GoalDetailPage({ params }: { params: Promise<{ id: strin
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#595B52]">
               <Link href="/dashboard" className="hover:text-[#17170F] transition">Dashboard</Link>
-              <Link href="/goals" className="text-[#17170F] font-bold border-b-2 border-[#5FA618] pb-0.5">My Goals</Link>
+              <Link href="/dashboard" className="text-[#17170F] font-bold border-b-2 border-[#5FA618] pb-0.5">My Goals</Link>
               <Link href="/transactions" className="hover:text-[#17170F] transition">Transactions</Link>
-              <Link href="/learn" className="hover:text-[#17170F] transition">Learn</Link>
             </nav>
           </div>
 
